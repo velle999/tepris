@@ -2,24 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>TEPRIS Arcade 🎮</title>
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
-    body {
+    html, body {
       margin: 0;
       padding: 0;
       font-family: 'Press Start 2P', monospace;
       background: radial-gradient(#111, #000);
-      color: #00ffff;
-      height: 100vh;
+      color: #0ff;
+      height: 100%;
+      width: 100%;
       overflow: hidden;
       display: flex;
       justify-content: center;
       align-items: center;
       flex-direction: column;
     }
+
     #arcade-shell {
       background: #000;
       border: 10px solid #0ff;
@@ -30,40 +32,44 @@
       flex-direction: column;
       align-items: center;
       position: relative;
+      max-width: 100vw;
+      max-height: 100vh;
     }
+
     #tetris-toggle {
       background: #0ff;
       color: #000;
       font-family: inherit;
-      font-size: 1rem;
-      padding: 10px 20px;
+      font-size: 1.2rem;
+      padding: 14px 28px;
       border: none;
-      border-radius: 8px;
-      margin-bottom: 10px;
+      border-radius: 12px;
+      margin-bottom: 16px;
       cursor: pointer;
       box-shadow: 0 0 10px #0ff;
       transition: background 0.2s ease;
     }
+
     #tetris-toggle:hover {
       background: #00aaff;
     }
-#tetris-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  background: #111;
-  width: 100%;
-  height: 100%;
-  padding: 10px;
-  box-sizing: border-box;
-  overflow-y: auto; /* ← THIS LINE */
-}
+
+    #tetris-wrapper {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      background: #111;
+      padding: 10px;
+      border-radius: 10px;
+    }
 
     #game-area {
       display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
       gap: 20px;
     }
+
     #preview-box {
       width: 100px;
       height: 100px;
@@ -71,6 +77,7 @@
       margin-bottom: 10px;
       background: rgba(0, 0, 0, 0.5);
     }
+
     #landing-preview {
       width: 200px;
       height: 20px;
@@ -78,6 +85,7 @@
       margin-top: 10px;
       background: rgba(255, 255, 255, 0.1);
     }
+
     #crt-flash {
       position: fixed;
       top: 0; left: 0;
@@ -87,12 +95,14 @@
       z-index: 9999;
       pointer-events: none;
     }
+
     @keyframes crt-flash {
       0%   { opacity: 1; }
       30%  { opacity: 0.4; }
       60%  { opacity: 0.9; }
       100% { opacity: 0; }
     }
+
     #ready-overlay {
       position: fixed;
       top: 0;
@@ -111,11 +121,16 @@
       opacity: 0;
       transition: opacity 0.3s ease;
     }
+
+    canvas {
+      image-rendering: pixelated;
+    }
   </style>
 </head>
 <body>
   <div id="crt-flash"></div>
   <div id="ready-overlay">READY…</div>
+
   <audio id="coin-sound" src="coin.wav" preload="auto"></audio>
   <audio id="start-sound" src="https://velle999.github.io/tepris/start.mp3" preload="auto"></audio>
 
@@ -126,7 +141,7 @@
       <div id="preview-box"></div>
       <div id="game-area">
         <div id="tetris-container">
-          <canvas id="tetris" width="200" height="400"></canvas>
+          <canvas id="tetris" width="240" height="480"></canvas>
           <div id="landing-preview"></div>
           <div id="scoreboard">
             <div>Score: <span id="score">0</span></div>
@@ -147,20 +162,22 @@
     </div>
   </div>
 
-  <!-- ✅ Load Tepris game logic first -->
+  <!-- ✅ Game Logic First -->
   <script src="tepris.js"></script>
 
-  <!-- ✅ THEN safely run DOM logic -->
+  <!-- ✅ UI/Audio Handling -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const toggleBtn = document.getElementById('tetris-toggle');
       const wrapper = document.getElementById('tetris-wrapper');
       const flash = document.getElementById('crt-flash');
       const coinSound = document.getElementById('coin-sound');
+      const startSound = document.getElementById('start-sound');
 
       toggleBtn.addEventListener('pointerdown', () => {
         console.log("🪙 Insert coin clicked!");
         coinSound?.play();
+        startSound?.play();
         flash.style.animation = 'crt-flash 0.6s ease';
         setTimeout(() => flash.style.animation = '', 600);
 
