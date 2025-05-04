@@ -8,7 +8,7 @@ let canvas, context;
 let previewCanvas, previewContext;
 let running = false;
 let paused = false;
-let blockSize = 20;
+let blockSize = 30;
 let rows = 20;
 let cols = 10;
 let dropCounter = 0;

@@ -30,8 +30,8 @@ body {
 /* === Insert Coin Button === */
 #tetris-toggle {
   font-family: 'Courier New', monospace;
-  font-size: 2rem;
-  padding: 20px 40px;
+  font-size: 2.5rem;
+  padding: 24px 48px;
   background: #00ffff;
   color: #000;
   border: none;
@@ -86,8 +86,8 @@ body {
 }
 
 #tetris {
-  width: 200px;
-  height: 400px;
+  width: 300px;
+  height: 600px;
   image-rendering: pixelated;
   background: rgba(0, 0, 0, 0.8);
   border: 2px solid #444;
@@ -95,8 +95,8 @@ body {
 
 /* === Preview Box === */
 #preview-box {
-  width: 100px;
-  height: 100px;
+  width: 150px;
+  height: 150px;
   border: 2px dashed #0ff;
   margin-bottom: 10px;
   background: rgba(0, 0, 0, 0.5);
@@ -105,7 +105,7 @@ body {
 /* === Scoreboard === */
 #scoreboard {
   margin-top: 10px;
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   text-align: center;
   color: #00ffcc;
   background: rgba(0, 0, 0, 0.6);
@@ -124,9 +124,9 @@ body {
 }
 
 #touch-controls button {
-  font-size: 1.5rem;
+  font-size: 2rem;
   margin: 0 5px;
-  padding: 10px;
+  padding: 14px;
   border: none;
   border-radius: 6px;
   background: #222;
@@ -162,5 +162,6 @@ body {
 
 /* === Overlay Fixes === */
 #ready-overlay {
+  font-size: 4rem;
   pointer-events: none; /* ✅ so clicks go through when transparent */
 }
