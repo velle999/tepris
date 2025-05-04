@@ -1,16 +1,18 @@
-// ===== TEPRIS.JS - RESPONSIVE, FLASHING LINES, FULL CONTROLS =====
+// ===== TEPRIS.JS - ENHANCED WITH FLASHING LINES & SWIPE CONTROLS =====
 
 const canvas = document.getElementById('tetris');
-const context = canvas?.getContext('2d');
+const context = canvas.getContext('2d');
 const previewBox = document.getElementById('preview-box');
 const previewCtx = previewBox?.getContext('2d');
 const scoreDisplay = document.getElementById('score');
 const highScoreDisplay = document.getElementById('highScore');
 const startSound = document.getElementById('start-sound');
 
-let blockSize = 20;
+const blockSize = 20;
 const rows = 20;
 const cols = 10;
+canvas.width = cols * blockSize;
+canvas.height = rows * blockSize;
 
 let score = 0;
 let highScore = parseInt(localStorage.getItem('teprisHighScore')) || 0;
@@ -39,7 +41,9 @@ const pieces = {
 };
 
 function createMatrix(w, h) {
-  return Array.from({ length: h }, () => Array(w).fill(0));
+  const matrix = [];
+  while (h--) matrix.push(new Array(w).fill(0));
+  return matrix;
 }
 
 function createPiece(type) {
@@ -47,7 +51,6 @@ function createPiece(type) {
 }
 
 function drawMatrix(matrix, offset, ctx = context, size = blockSize, color = '#0ff', opacity = 1) {
-  if (!ctx) return;
   ctx.save();
   ctx.globalAlpha = opacity;
   matrix.forEach((row, y) => {
@@ -57,8 +60,12 @@ function drawMatrix(matrix, offset, ctx = context, size = blockSize, color = '#0
         const globalY = y + offset.y;
         const now = performance.now();
         let fill = color;
-        if (flashingCells.some(c => c.x === globalX && c.y === globalY) && now - flashStartTime < flashDuration)
+        if (
+          flashingCells.some(c => c.x === globalX && c.y === globalY) &&
+          now - flashStartTime < flashDuration
+        ) {
           fill = '#fff';
+        }
         ctx.fillStyle = fill;
         ctx.fillRect(globalX * size, globalY * size, size, size);
         ctx.strokeStyle = '#000';
@@ -90,9 +97,17 @@ function rotateMatrix(matrix, dir) {
   const rows = matrix.length;
   const cols = matrix[0].length;
   const rotated = Array.from({ length: cols }, () => Array(rows).fill(0));
-  for (let y = 0; y < rows; y++)
-    for (let x = 0; x < cols; x++)
-      rotated[dir > 0 ? x : cols - 1 - x][dir > 0 ? rows - 1 - y : y] = matrix[y][x];
+
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      if (dir > 0) {
+        rotated[x][rows - 1 - y] = matrix[y][x];
+      } else {
+        rotated[cols - 1 - x][y] = matrix[y][x];
+      }
+    }
+  }
+
   return rotated;
 }
 
@@ -100,6 +115,7 @@ function rotatePiece(dir) {
   const rotated = rotateMatrix(current, dir);
   const oldX = pos.x;
   let offset = 1;
+
   while (collide(arena, { matrix: rotated, pos })) {
     pos.x += offset;
     offset = -(offset + (offset > 0 ? 1 : -1));
@@ -108,6 +124,7 @@ function rotatePiece(dir) {
       return;
     }
   }
+
   current = rotated;
 }
 
@@ -124,7 +141,9 @@ function drop() {
 }
 
 function hardDrop() {
-  while (!collide(arena, { matrix: current, pos })) pos.y++;
+  while (!collide(arena, { matrix: current, pos })) {
+    pos.y++;
+  }
   pos.y--;
   merge(arena, { matrix: current, pos });
   resetPiece();
@@ -135,15 +154,16 @@ function hardDrop() {
 function sweep() {
   flashingCells = [];
   for (let y = rows - 1; y >= 0; y--) {
-    if (arena[y].every(val => val !== 0))
-      for (let x = 0; x < cols; x++)
+    if (arena[y].every(val => val !== 0)) {
+      for (let x = 0; x < cols; x++) {
         flashingCells.push({ x, y });
+      }
+    }
   }
   if (flashingCells.length) flashStartTime = performance.now();
 }
 
 function draw() {
-  if (!context) return;
   context.fillStyle = '#111';
   context.fillRect(0, 0, canvas.width, canvas.height);
   drawMatrix(arena, { x: 0, y: 0 });
@@ -155,7 +175,9 @@ function draw() {
 function drawGhostPiece() {
   if (!current) return;
   const ghostPos = { x: pos.x, y: pos.y };
-  while (!collide(arena, { matrix: current, pos: ghostPos })) ghostPos.y++;
+  while (!collide(arena, { matrix: current, pos: ghostPos })) {
+    ghostPos.y++;
+  }
   ghostPos.y--;
   drawMatrix(current, ghostPos, context, blockSize, '#0ff', 0.2);
 }
@@ -218,46 +240,18 @@ function updateScore() {
 
 function startTetris() {
   if (running) return;
-  try { startSound?.play(); } catch (e) { console.warn('🔇 Audio blocked:', e.message); }
+  try {
+    startSound?.play();
+  } catch (e) {
+    console.warn('🔇 Audio blocked:', e.message);
+  }
   arena = createMatrix(cols, rows);
   current = randomPiece();
   next = randomPiece();
-  pos = { x: 4, y: 0 };
   updateScore();
   running = true;
-  resizeCanvas();
   update();
 }
-
-function resizeCanvas() {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-
-  // Block size that keeps square blocks and fits both directions
-  const maxBlockWidth = Math.floor(vw / cols);
-  const maxBlockHeight = Math.floor(vh / rows);
-  blockSize = Math.min(maxBlockWidth, maxBlockHeight);
-
-  const pixelWidth = cols * blockSize;
-  const pixelHeight = rows * blockSize;
-
-  // Set both the internal resolution AND the display size
-  canvas.width = pixelWidth;
-  canvas.height = pixelHeight;
-  canvas.style.width = pixelWidth + 'px';
-  canvas.style.height = pixelHeight + 'px';
-
-  if (previewBox) {
-    previewBox.width = 80;
-    previewBox.height = 80;
-    previewBox.style.width = '80px';
-    previewBox.style.height = '80px';
-  }
-
-  draw();
-}
-
-window.addEventListener('resize', resizeCanvas);
 
 // === CONTROLS ===
 document.addEventListener('keydown', e => {
@@ -295,12 +289,22 @@ canvas.addEventListener('touchend', (e) => {
   const dy = touch.clientY - touchStartY;
   const absX = Math.abs(dx);
   const absY = Math.abs(dy);
+
   if (Math.max(absX, absY) < 20) return;
 
   if (absX > absY) {
-    dx > 0 ? pos.x++ : pos.x--;
-    if (collide(arena, { matrix: current, pos })) dx > 0 ? pos.x-- : pos.x++;
+    if (dx > 0) {
+      pos.x++;
+      if (collide(arena, { matrix: current, pos })) pos.x--;
+    } else {
+      pos.x--;
+      if (collide(arena, { matrix: current, pos })) pos.x++;
+    }
   } else {
-    dy > 0 ? hardDrop() : rotatePiece(1);
+    if (dy > 0) {
+      hardDrop();
+    } else {
+      rotatePiece(1);
+    }
   }
 }, { passive: true });
