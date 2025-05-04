@@ -262,9 +262,11 @@ canvas.addEventListener('touchend', (e) => {
   const absX = Math.abs(dx);
   const absY = Math.abs(dy);
 
-  if (Math.max(absX, absY) < 20) return; // ignore small movements
+  // Ignore tiny finger wiggles
+  if (Math.max(absX, absY) < 20) return;
 
   if (absX > absY) {
+    // Horizontal swipe
     if (dx > 0) {
       pos.x++;
       if (collide(arena, { matrix: current, pos })) pos.x--;
@@ -273,12 +275,12 @@ canvas.addEventListener('touchend', (e) => {
       if (collide(arena, { matrix: current, pos })) pos.x++;
     }
   } else {
+    // Vertical swipe
     if (dy > 0) {
-      drop(); // swipe down
+      hardDrop(); // ⬇️ Hard drop!
     } else {
-      rotatePiece(1); // swipe up
+      rotatePiece(1); // ⬆️ Rotate on upward swipe
     }
   }
 }, { passive: true });
-
 
