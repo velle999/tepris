@@ -1,3 +1,5 @@
+// ===== TEPRIS.JS - ENHANCED WITH FLASHING LINES & SWIPE CONTROLS =====
+
 const canvas = document.getElementById('tetris');
 const context = canvas.getContext('2d');
 const previewBox = document.getElementById('preview-box');
@@ -24,6 +26,10 @@ let pos = { x: 0, y: 0 };
 let running = false;
 let paused = false;
 
+let flashingCells = [];
+let flashStartTime = 0;
+let flashDuration = 200;
+
 const pieces = {
   I: [[1, 1, 1, 1]],
   J: [[1, 0, 0], [1, 1, 1]],
@@ -41,7 +47,7 @@ function createMatrix(w, h) {
 }
 
 function createPiece(type) {
-  return pieces[type].map(row => [...row]); // Always clone
+  return pieces[type].map(row => [...row]);
 }
 
 function drawMatrix(matrix, offset, ctx = context, size = blockSize, color = '#0ff', opacity = 1) {
@@ -50,10 +56,20 @@ function drawMatrix(matrix, offset, ctx = context, size = blockSize, color = '#0
   matrix.forEach((row, y) => {
     row.forEach((val, x) => {
       if (val) {
-        ctx.fillStyle = color;
-        ctx.fillRect((x + offset.x) * size, (y + offset.y) * size, size, size);
+        const globalX = x + offset.x;
+        const globalY = y + offset.y;
+        const now = performance.now();
+        let fill = color;
+        if (
+          flashingCells.some(c => c.x === globalX && c.y === globalY) &&
+          now - flashStartTime < flashDuration
+        ) {
+          fill = '#fff';
+        }
+        ctx.fillStyle = fill;
+        ctx.fillRect(globalX * size, globalY * size, size, size);
         ctx.strokeStyle = '#000';
-        ctx.strokeRect((x + offset.x) * size, (y + offset.y) * size, size, size);
+        ctx.strokeRect(globalX * size, globalY * size, size, size);
       }
     });
   });
@@ -85,9 +101,9 @@ function rotateMatrix(matrix, dir) {
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       if (dir > 0) {
-        rotated[x][rows - 1 - y] = matrix[y][x]; // CW
+        rotated[x][rows - 1 - y] = matrix[y][x];
       } else {
-        rotated[cols - 1 - x][y] = matrix[y][x]; // CCW
+        rotated[cols - 1 - x][y] = matrix[y][x];
       }
     }
   }
@@ -136,14 +152,15 @@ function hardDrop() {
 }
 
 function sweep() {
-  outer: for (let y = rows - 1; y >= 0; y--) {
-    for (let x = 0; x < cols; x++) {
-      if (arena[y][x] === 0) continue outer;
+  flashingCells = [];
+  for (let y = rows - 1; y >= 0; y--) {
+    if (arena[y].every(val => val !== 0)) {
+      for (let x = 0; x < cols; x++) {
+        flashingCells.push({ x, y });
+      }
     }
-    arena.splice(y, 1);
-    arena.unshift(new Array(cols).fill(0));
-    score += 10;
   }
+  if (flashingCells.length) flashStartTime = performance.now();
 }
 
 function draw() {
@@ -179,6 +196,18 @@ function update(time = 0) {
   dropCounter += delta;
   if (!paused && dropCounter > dropInterval) drop();
   draw();
+
+  if (flashingCells.length && performance.now() - flashStartTime > flashDuration) {
+    const rowsToClear = [...new Set(flashingCells.map(c => c.y))];
+    for (let y of rowsToClear.sort((a, b) => b - a)) {
+      arena.splice(y, 1);
+      arena.unshift(new Array(cols).fill(0));
+      score += 10;
+    }
+    flashingCells = [];
+    updateScore();
+  }
+
   if (running) requestAnimationFrame(update);
 }
 
@@ -248,7 +277,6 @@ window.startTetris = startTetris;
 
 // === SWIPE GESTURES ===
 let touchStartX = 0, touchStartY = 0;
-
 canvas.addEventListener('touchstart', (e) => {
   const touch = e.touches[0];
   touchStartX = touch.clientX;
@@ -262,11 +290,9 @@ canvas.addEventListener('touchend', (e) => {
   const absX = Math.abs(dx);
   const absY = Math.abs(dy);
 
-  // Ignore tiny finger wiggles
   if (Math.max(absX, absY) < 20) return;
 
   if (absX > absY) {
-    // Horizontal swipe
     if (dx > 0) {
       pos.x++;
       if (collide(arena, { matrix: current, pos })) pos.x--;
@@ -275,12 +301,10 @@ canvas.addEventListener('touchend', (e) => {
       if (collide(arena, { matrix: current, pos })) pos.x++;
     }
   } else {
-    // Vertical swipe
     if (dy > 0) {
-      hardDrop(); // ⬇️ Hard drop!
+      hardDrop();
     } else {
-      rotatePiece(1); // ⬆️ Rotate on upward swipe
+      rotatePiece(1);
     }
   }
 }, { passive: true });
-
