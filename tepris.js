@@ -274,12 +274,18 @@ function setupSwipeControls() {
   let startY = 0;
   let startTime = 0;
 
+  // 👇 Prevent scrolling while touching canvas
   document.addEventListener('touchstart', (e) => {
+    if (e.target.closest('#tetris')) e.preventDefault();
     const touch = e.changedTouches[0];
     startX = touch.screenX;
     startY = touch.screenY;
     startTime = Date.now();
-  });
+  }, { passive: false });
+
+  document.addEventListener('touchmove', (e) => {
+    if (e.target.closest('#tetris')) e.preventDefault();
+  }, { passive: false });
 
   document.addEventListener('touchend', (e) => {
     if (!running || paused) return;
@@ -300,7 +306,7 @@ function setupSwipeControls() {
       }
     } else if (absY > 30) {
       if (deltaY > 0) {
-        // Swipe down: hard drop if fast, soft drop otherwise
+        // Swipe down
         if (elapsed < 200) {
           while (isValidMove(currentPiece, posX, posY + 1)) posY++;
           merge(playfield, currentPiece, posX, posY, currentColor);
@@ -311,9 +317,49 @@ function setupSwipeControls() {
           if (isValidMove(currentPiece, posX, posY + 1)) posY++;
         }
       } else {
-        // Swipe up: rotate
+        // Swipe up to rotate
         tryRotateClockwise();
       }
+    }
+  });
+}
+
+function setupKeyboardControls() {
+  document.addEventListener('keydown', (e) => {
+    if (!running || paused) return;
+
+    switch (e.key) {
+      case 'ArrowLeft':
+      case 'a':
+        if (isValidMove(currentPiece, posX - 1, posY)) posX--;
+        break;
+      case 'ArrowRight':
+      case 'd':
+        if (isValidMove(currentPiece, posX + 1, posY)) posX++;
+        break;
+      case 'ArrowUp':
+      case 'w':
+      case 'x':
+        tryRotateClockwise();
+        break;
+      case 'ArrowDown':
+      case 's':
+        if (isValidMove(currentPiece, posX, posY + 1)) {
+          posY++;
+        }
+        break;
+      case ' ':
+        // Hard drop
+        while (isValidMove(currentPiece, posX, posY + 1)) posY++;
+        merge(playfield, currentPiece, posX, posY, currentColor);
+        updateScore(10);
+        clearRows();
+        spawnNewPiece();
+        break;
+      case 'Enter':
+      case 'p':
+        paused = !paused;
+        break;
     }
   });
 }
@@ -322,21 +368,17 @@ window.startTetris = function () {
   showReadyGoOverlay(() => {
     running = true;
 
-    // Setup canvas and scaling
     canvas = document.getElementById('tetris');
     context = canvas.getContext('2d');
 
-    // Dynamically calculate block size based on screen width
     const screenWidth = window.innerWidth;
-    blockSize = Math.floor(screenWidth / cols / 1.5); // Adjust scale for fit
+    blockSize = Math.floor(screenWidth / cols / 1.5);
 
-    // Set canvas resolution and scale for high-DPI devices
     const scale = window.devicePixelRatio || 1;
     canvas.width = cols * blockSize * scale;
     canvas.height = rows * blockSize * scale;
-    context.setTransform(scale, 0, 0, scale, 0, 0); // prevent blurry scaling
+    context.setTransform(scale, 0, 0, scale, 0, 0);
 
-    // Initialize game state
     playfield = createMatrix(rows, cols);
     nextPiece = randomPiece();
     nextColor = randomColor();
@@ -345,11 +387,12 @@ window.startTetris = function () {
     lastTime = 0;
     dropCounter = 0;
 
-    // Setup UI and loop
     setupScoreboard();
     updateScoreboard();
     requestAnimationFrame(drawTetris);
-    setupSwipeControls(); // enable mobile gestures
+
+    setupSwipeControls();     // mobile
+    setupKeyboardControls();  // desktop
   });
 };
 
