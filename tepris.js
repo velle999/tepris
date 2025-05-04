@@ -245,3 +245,40 @@ document.getElementById('rotate-btn')?.addEventListener('click', () => rotatePie
 
 // === START HOOK ===
 window.startTetris = startTetris;
+
+// === SWIPE GESTURES ===
+let touchStartX = 0, touchStartY = 0;
+
+canvas.addEventListener('touchstart', (e) => {
+  const touch = e.touches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+}, { passive: true });
+
+canvas.addEventListener('touchend', (e) => {
+  const touch = e.changedTouches[0];
+  const dx = touch.clientX - touchStartX;
+  const dy = touch.clientY - touchStartY;
+  const absX = Math.abs(dx);
+  const absY = Math.abs(dy);
+
+  if (Math.max(absX, absY) < 20) return; // ignore small movements
+
+  if (absX > absY) {
+    if (dx > 0) {
+      pos.x++;
+      if (collide(arena, { matrix: current, pos })) pos.x--;
+    } else {
+      pos.x--;
+      if (collide(arena, { matrix: current, pos })) pos.x++;
+    }
+  } else {
+    if (dy > 0) {
+      drop(); // swipe down
+    } else {
+      rotatePiece(1); // swipe up
+    }
+  }
+}, { passive: true });
+
+
