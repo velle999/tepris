@@ -32,6 +32,7 @@ body {
   font-family: 'Courier New', monospace;
   font-size: 2.5rem;
   padding: 24px 48px;
+  touch-action: manipulation; /* Prevent double-tap zoom */
   background: #00ffff;
   color: #000;
   border: none;

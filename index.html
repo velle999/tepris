@@ -20,7 +20,6 @@
       align-items: center;
       flex-direction: column;
     }
-
     #arcade-shell {
       background: #000;
       border: 10px solid #0ff;
@@ -32,7 +31,6 @@
       align-items: center;
       position: relative;
     }
-
     #tetris-toggle {
       background: #0ff;
       color: #000;
@@ -46,11 +44,9 @@
       box-shadow: 0 0 10px #0ff;
       transition: background 0.2s ease;
     }
-
     #tetris-toggle:hover {
       background: #00aaff;
     }
-
     #tetris-wrapper {
       display: none;
       flex-direction: column;
@@ -59,12 +55,10 @@
       padding: 10px;
       border-radius: 10px;
     }
-
     #game-area {
       display: flex;
       gap: 20px;
     }
-
     #preview-box {
       width: 100px;
       height: 100px;
@@ -72,7 +66,6 @@
       margin-bottom: 10px;
       background: rgba(0, 0, 0, 0.5);
     }
-
     #landing-preview {
       width: 200px;
       height: 20px;
@@ -80,7 +73,6 @@
       margin-top: 10px;
       background: rgba(255, 255, 255, 0.1);
     }
-
     #crt-flash {
       position: fixed;
       top: 0; left: 0;
@@ -90,14 +82,12 @@
       z-index: 9999;
       pointer-events: none;
     }
-
     @keyframes crt-flash {
       0%   { opacity: 1; }
       30%  { opacity: 0.4; }
       60%  { opacity: 0.9; }
       100% { opacity: 0; }
     }
-
     #ready-overlay {
       position: fixed;
       top: 0;
@@ -115,7 +105,6 @@
       z-index: 10000;
       opacity: 0;
       transition: opacity 0.3s ease;
-      pointer-events: none; /* ✅ lets you click through the overlay */
     }
   </style>
 </head>
@@ -132,7 +121,7 @@
       <div id="preview-box"></div>
       <div id="game-area">
         <div id="tetris-container">
-          <canvas id="tetris" width="300" height="600"></canvas>
+          <canvas id="tetris" width="200" height="400"></canvas>
           <div id="landing-preview"></div>
           <div id="scoreboard">
             <div>Score: <span id="score">0</span></div>
@@ -153,10 +142,10 @@
     </div>
   </div>
 
-  <!-- ✅ Load Tepris game logic -->
+  <!-- ✅ Load Tepris game logic first -->
   <script src="tepris.js"></script>
 
-  <!-- ✅ DOM logic for toggle button -->
+  <!-- ✅ THEN safely run DOM logic -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const toggleBtn = document.getElementById('tetris-toggle');
@@ -164,20 +153,21 @@
       const flash = document.getElementById('crt-flash');
       const coinSound = document.getElementById('coin-sound');
 
-toggleBtn.addEventListener('click', () => {
-  console.log("🪙 Insert coin clicked!");
-  coinSound?.play();
-  startSound?.play(); // play .mp3 from .io site
-  flash.style.animation = 'crt-flash 0.6s ease';
-  setTimeout(() => flash.style.animation = '', 600);
+      toggleBtn.addEventListener('pointerdown', () => {
+        console.log("🪙 Insert coin clicked!");
+        coinSound?.play();
+        flash.style.animation = 'crt-flash 0.6s ease';
+        setTimeout(() => flash.style.animation = '', 600);
 
-  toggleBtn.style.display = 'none';
-  wrapper.style.display = 'flex';
+        toggleBtn.style.display = 'none';
+        wrapper.style.display = 'flex';
 
-  if (typeof startTetris === 'function') {
-    startTetris();
-  }
-});
+        if (typeof startTetris === 'function') {
+          startTetris();
+        } else {
+          console.warn('❌ startTetris is not defined.');
+        }
+      });
     });
   </script>
 </body>

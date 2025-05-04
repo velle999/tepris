@@ -1,4 +1,3 @@
-
 // ===== TEPRIS.JS - CLEANED, FIXED AND FUNCTIONAL =====
 
 let score = 0;
@@ -8,7 +7,7 @@ let canvas, context;
 let previewCanvas, previewContext;
 let running = false;
 let paused = false;
-let blockSize = 30;
+let blockSize = 20;
 let rows = 20;
 let cols = 10;
 let dropCounter = 0;
@@ -94,7 +93,8 @@ function drawGhostPiece() {
 }
 
 function drawTetris(time = 0) {
-  if (!running || paused) return requestAnimationFrame(drawTetris);
+  if (!running) return;
+  if (paused) return requestAnimationFrame(drawTetris);
 
   const deltaTime = time - lastTime;
   lastTime = time;
@@ -105,7 +105,6 @@ function drawTetris(time = 0) {
     if (collide(playfield, currentPiece, posX, posY)) {
       posY--;
       merge(playfield, currentPiece, posX, posY, currentColor);
-      updateScore(10); // +10 per piece landed
       clearRows();
       spawnNewPiece();
     }
@@ -163,7 +162,6 @@ function clearRows() {
 function updateScore(p) {
   score += p;
   document.getElementById('score').textContent = score;
-  document.getElementById('highScore').textContent = `${highScore} (${highScoreInitials})`;
 }
 
 function updateScoreboard() {
@@ -254,59 +252,68 @@ function showReadyGoOverlay(callback) {
   setTimeout(tick, 600);
 }
 
-function setupTouchControls() {
-  ['left-btn', 'right-btn', 'rotate-btn', 'down-btn'].forEach(id => {
-    document.getElementById(id)?.addEventListener('click', () => {
-      if (!running) return;
-      switch (id) {
-        case 'left-btn': if (isValidMove(currentPiece, posX - 1, posY)) posX--; break;
-        case 'right-btn': if (isValidMove(currentPiece, posX + 1, posY)) posX++; break;
-        case 'rotate-btn': tryRotateClockwise(); break;
-        case 'down-btn':
+['left-btn', 'right-btn', 'rotate-btn', 'down-btn'].forEach(id => {
+  document.getElementById(id)?.addEventListener('pointerdown', () => {
+    if (!running) return;
+    switch (id) {
+      case 'left-btn': if (isValidMove(currentPiece, posX - 1, posY)) posX--; break;
+      case 'right-btn': if (isValidMove(currentPiece, posX + 1, posY)) posX++; break;
+      case 'rotate-btn': tryRotateClockwise(); break;
+      case 'down-btn':
+        while (isValidMove(currentPiece, posX, posY + 1)) posY++;
+        merge(playfield, currentPiece, posX, posY, currentColor);
+        clearRows();
+        spawnNewPiece();
+        break;
+    }
+  });
+});
+
+function setupSwipeControls() {
+  let startX = 0;
+  let startY = 0;
+  let startTime = 0;
+
+  document.addEventListener('touchstart', (e) => {
+    const touch = e.changedTouches[0];
+    startX = touch.screenX;
+    startY = touch.screenY;
+    startTime = Date.now();
+  });
+
+  document.addEventListener('touchend', (e) => {
+    if (!running || paused) return;
+
+    const touch = e.changedTouches[0];
+    const deltaX = touch.screenX - startX;
+    const deltaY = touch.screenY - startY;
+    const elapsed = Date.now() - startTime;
+
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (absX > absY && absX > 30) {
+      if (deltaX > 0) {
+        if (isValidMove(currentPiece, posX + 1, posY)) posX++; // right
+      } else {
+        if (isValidMove(currentPiece, posX - 1, posY)) posX--; // left
+      }
+    } else if (absY > 30) {
+      if (deltaY > 0) {
+        // Swipe down: hard drop if fast, soft drop otherwise
+        if (elapsed < 200) {
           while (isValidMove(currentPiece, posX, posY + 1)) posY++;
           merge(playfield, currentPiece, posX, posY, currentColor);
           updateScore(10);
           clearRows();
           spawnNewPiece();
-          break;
-      }
-    });
-  });
-}
-
-function setupKeyboardControls() {
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      paused = !paused;
-      showPauseOverlay?.(paused); // Optional visual feedback
-      if (!paused) requestAnimationFrame(drawTetris);
-      return;
-    }
-
-    if (!running || paused) return;
-
-    switch (e.key) {
-      case 'ArrowLeft':
-        if (isValidMove(currentPiece, posX - 1, posY)) posX--;
-        break;
-      case 'ArrowRight':
-        if (isValidMove(currentPiece, posX + 1, posY)) posX++;
-        break;
-      case 'ArrowDown':
-        if (isValidMove(currentPiece, posX, posY + 1)) posY++;
-        break;
-      case 'z':
-      case 'x':
-      case 'ArrowUp':
+        } else {
+          if (isValidMove(currentPiece, posX, posY + 1)) posY++;
+        }
+      } else {
+        // Swipe up: rotate
         tryRotateClockwise();
-        break;
-      case ' ':
-        while (isValidMove(currentPiece, posX, posY + 1)) posY++;
-        merge(playfield, currentPiece, posX, posY, currentColor);
-        updateScore(10);
-        clearRows();
-        spawnNewPiece();
-        break;
+      }
     }
   });
 }
@@ -325,13 +332,19 @@ window.startTetris = function () {
     dropCounter = 0;
     setupScoreboard();
     updateScoreboard();
-    setupTouchControls();
-    setupKeyboardControls();
     requestAnimationFrame(drawTetris);
+    setupSwipeControls(); // enable swipe gestures
   });
 };
 
 document.addEventListener('DOMContentLoaded', () => {
   setupScoreboard();
   loadHighScores().then(updateScoreboard);
+  document.getElementById('tetris-toggle').addEventListener('pointerdown', () => {
+    if (!running && typeof window.startTetris === 'function') {
+      window.startTetris();
+    } else {
+      console.error('startTetris is not defined.');
+    }
+  });
 });
