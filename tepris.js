@@ -321,8 +321,22 @@ function setupSwipeControls() {
 window.startTetris = function () {
   showReadyGoOverlay(() => {
     running = true;
+
+    // Setup canvas and scaling
     canvas = document.getElementById('tetris');
     context = canvas.getContext('2d');
+
+    // Dynamically calculate block size based on screen width
+    const screenWidth = window.innerWidth;
+    blockSize = Math.floor(screenWidth / cols / 1.5); // Adjust scale for fit
+
+    // Set canvas resolution and scale for high-DPI devices
+    const scale = window.devicePixelRatio || 1;
+    canvas.width = cols * blockSize * scale;
+    canvas.height = rows * blockSize * scale;
+    context.setTransform(scale, 0, 0, scale, 0, 0); // prevent blurry scaling
+
+    // Initialize game state
     playfield = createMatrix(rows, cols);
     nextPiece = randomPiece();
     nextColor = randomColor();
@@ -330,12 +344,15 @@ window.startTetris = function () {
     score = 0;
     lastTime = 0;
     dropCounter = 0;
+
+    // Setup UI and loop
     setupScoreboard();
     updateScoreboard();
     requestAnimationFrame(drawTetris);
-    setupSwipeControls(); // enable swipe gestures
+    setupSwipeControls(); // enable mobile gestures
   });
 };
+
 
 document.addEventListener('DOMContentLoaded', () => {
   setupScoreboard();
