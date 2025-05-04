@@ -8,11 +8,15 @@ html, body {
   font-family: 'Courier New', monospace;
   color: #eee;
   overflow: hidden;
+  touch-action: none;           /* 🚫 Disable mobile swipes */
+  overscroll-behavior: none;    /* 🚫 Prevent scroll chaining on iOS */
+  position: fixed;              /* 🚫 Lock scroll position */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
 }
+
 
 /* === Arcade Shell === */
 #arcade-shell {
