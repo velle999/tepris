@@ -94,7 +94,9 @@ function drawGhostPiece() {
 
 function drawTetris(time = 0) {
   if (!running) return;
-  if (paused) return requestAnimationFrame(drawTetris);
+
+  requestAnimationFrame(drawTetris); // keep looping, paused or not
+  if (paused) return;
 
   const deltaTime = time - lastTime;
   lastTime = time;
@@ -115,8 +117,22 @@ function drawTetris(time = 0) {
   drawMatrix(playfield);
   drawGhostPiece();
   drawMatrix(currentPiece, posX, posY);
+}
 
-  requestAnimationFrame(drawTetris);
+function togglePause() {
+  if (!running) return;
+
+  paused = !paused;
+  console.log(paused ? "⏸️ Paused" : "▶️ Resumed");
+
+  const overlay = document.getElementById('ready-overlay');
+  if (paused) {
+    overlay.textContent = '⏸️ PAUSED';
+    overlay.style.opacity = 1;
+  } else {
+    overlay.style.opacity = 0;
+    lastTime = performance.now(); // prevent jump on resume
+  }
 }
 
 function spawnNewPiece() {
@@ -274,18 +290,14 @@ function setupSwipeControls() {
   let startY = 0;
   let startTime = 0;
 
-  // 👇 Prevent scrolling while touching canvas
-  document.addEventListener('touchstart', (e) => {
-    if (e.target.closest('#tetris')) e.preventDefault();
-    const touch = e.changedTouches[0];
-    startX = touch.screenX;
-    startY = touch.screenY;
-    startTime = Date.now();
-  }, { passive: false });
+document.addEventListener('touchstart', (e) => {
+  if (e.target.closest('#tetris')) e.preventDefault();
+}, { passive: false });
 
-  document.addEventListener('touchmove', (e) => {
-    if (e.target.closest('#tetris')) e.preventDefault();
-  }, { passive: false });
+document.addEventListener('touchmove', (e) => {
+  if (e.target.closest('#tetris')) e.preventDefault();
+}, { passive: false });
+
 
   document.addEventListener('touchend', (e) => {
     if (!running || paused) return;
@@ -306,7 +318,7 @@ function setupSwipeControls() {
       }
     } else if (absY > 30) {
       if (deltaY > 0) {
-        // Swipe down
+        // Swipe down: hard drop if fast, soft drop otherwise
         if (elapsed < 200) {
           while (isValidMove(currentPiece, posX, posY + 1)) posY++;
           merge(playfield, currentPiece, posX, posY, currentColor);
@@ -317,51 +329,85 @@ function setupSwipeControls() {
           if (isValidMove(currentPiece, posX, posY + 1)) posY++;
         }
       } else {
-        // Swipe up to rotate
+        // Swipe up: rotate
         tryRotateClockwise();
       }
     }
   });
 }
-
 function setupKeyboardControls() {
   document.addEventListener('keydown', (e) => {
-    if (!running || paused) return;
+    if (!running) return;
 
-    switch (e.key) {
-      case 'ArrowLeft':
+    const key = e.key.toLowerCase();
+
+    if (key === 'enter' || key === 'p') {
+      e.preventDefault();
+      togglePause();
+      return;
+    }
+
+    if (paused) return;
+
+    switch (key) {
+      case 'arrowleft':
       case 'a':
-        if (isValidMove(currentPiece, posX - 1, posY)) posX--;
+        if (isValidMove(currentPiece, posX - 1, posY)) {
+          posX--;
+        }
         break;
-      case 'ArrowRight':
+
+      case 'arrowright':
       case 'd':
-        if (isValidMove(currentPiece, posX + 1, posY)) posX++;
+        if (isValidMove(currentPiece, posX + 1, posY)) {
+          posX++;
+        }
         break;
-      case 'ArrowUp':
+
+      case 'arrowup':
       case 'w':
       case 'x':
         tryRotateClockwise();
         break;
-      case 'ArrowDown':
+
+      case 'arrowdown':
       case 's':
         if (isValidMove(currentPiece, posX, posY + 1)) {
           posY++;
         }
         break;
+
       case ' ':
-        // Hard drop
-        while (isValidMove(currentPiece, posX, posY + 1)) posY++;
-        merge(playfield, currentPiece, posX, posY, currentColor);
-        updateScore(10);
-        clearRows();
-        spawnNewPiece();
-        break;
-      case 'Enter':
-      case 'p':
-        paused = !paused;
+        e.preventDefault(); // stop scroll AND fix repeat
+        if (!paused) {
+          // Single hard drop
+          while (isValidMove(currentPiece, posX, posY + 1)) posY++;
+          merge(playfield, currentPiece, posX, posY, currentColor);
+          updateScore(10);
+          clearRows();
+          spawnNewPiece();
+        }
         break;
     }
-  });
+  }, { passive: false }); // Prevent passive behavior to block default
+}
+
+function togglePause() {
+  if (!running) return;
+
+  paused = !paused;
+  console.log(paused ? "⏸️ Paused" : "▶️ Resumed");
+
+  const overlay = document.getElementById('ready-overlay');
+  if (paused) {
+    overlay.textContent = '⏸️ PAUSED';
+    overlay.style.opacity = 1;
+  } else {
+    overlay.style.opacity = 0;
+    // Immediately resume drawing — reset timer so frame delta doesn't explode
+    lastTime = performance.now();
+    requestAnimationFrame(drawTetris);
+  }
 }
 
 window.startTetris = function () {
