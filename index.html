@@ -1,122 +1,152 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Standard Favicon -->
-<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="96x96" href="assets/favicon-96x96.png">
-
-<!-- Apple Touch Icons -->
-<link rel="apple-touch-icon" sizes="57x57" href="assets/apple-icon-57x57.png">
-<link rel="apple-touch-icon" sizes="60x60" href="assets/apple-icon-60x60.png">
-<link rel="apple-touch-icon" sizes="72x72" href="assets/apple-icon-72x72.png">
-<link rel="apple-touch-icon" sizes="76x76" href="assets/apple-icon-76x76.png">
-<link rel="apple-touch-icon" sizes="114x114" href="assets/apple-icon-114x114.png">
-<link rel="apple-touch-icon" sizes="120x120" href="assets/apple-icon-120x120.png">
-<link rel="apple-touch-icon" sizes="144x144" href="assets/apple-icon-144x144.png">
-<link rel="apple-touch-icon" sizes="152x152" href="assets/apple-icon-152x152.png">
-<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-icon-180x180.png">
-
-<!-- Android Icons -->
-<link rel="icon" type="image/png" sizes="36x36" href="assets/android-icon-36x36.png">
-<link rel="icon" type="image/png" sizes="48x48" href="assets/android-icon-48x48.png">
-<link rel="icon" type="image/png" sizes="72x72" href="assets/android-icon-72x72.png">
-<link rel="icon" type="image/png" sizes="96x96" href="assets/android-icon-96x96.png">
-<link rel="icon" type="image/png" sizes="144x144" href="assets/android-icon-144x144.png">
-<link rel="icon" type="image/png" sizes="192x192" href="assets/android-icon-192x192.png">
-
-<!-- Windows / MS Tiles -->
-<meta name="msapplication-TileColor" content="#000000">
-<meta name="msapplication-TileImage" content="assets/ms-icon-144x144.png">
-<meta name="theme-color" content="#000000">
-
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>TEPRIS Arcade 🎮</title>
+
+  <!-- Favicon & Icons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-icon-180x180.png" />
+  <meta name="theme-color" content="#000000" />
+
+  <!-- Font & Style -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
-    body {
+    html, body {
       margin: 0;
       padding: 0;
       font-family: 'Press Start 2P', monospace;
       background: radial-gradient(#111, #000);
-      color: #00ffff;
-      height: 100vh;
+      color: #0ff;
+      height: 100%;
       overflow: hidden;
       display: flex;
       justify-content: center;
       align-items: center;
       flex-direction: column;
     }
+
     #arcade-shell {
       background: #000;
       border: 10px solid #0ff;
       border-radius: 20px;
-      padding: 20px;
       box-shadow: 0 0 20px #0ff;
+      padding: 16px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      position: relative;
     }
+
     #tetris-toggle {
       background: #0ff;
       color: #000;
-      font-family: inherit;
       font-size: 1rem;
-      padding: 10px 20px;
+      padding: 12px 24px;
       border: none;
       border-radius: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       cursor: pointer;
       box-shadow: 0 0 10px #0ff;
       transition: background 0.2s ease;
     }
+
     #tetris-toggle:hover {
       background: #00aaff;
     }
+
     #tetris-wrapper {
       display: none;
       flex-direction: column;
       align-items: center;
-      background: #111;
-      padding: 10px;
-      border-radius: 10px;
+      gap: 16px;
     }
+
     #game-area {
       display: flex;
-      gap: 20px;
+      flex-direction: column;
+      align-items: center;
     }
+
+    canvas#tetris {
+      touch-action: none;
+      background: #111;
+    }
+
     canvas#preview-box {
       width: 80px;
       height: 80px;
       border: 2px dashed #0ff;
-      margin-bottom: 10px;
       background: rgba(0, 0, 0, 0.5);
+      margin-bottom: 8px;
     }
+
     #landing-preview {
-      width: 200px;
+      width: 100%;
       height: 20px;
-      border: 1px solid #0ff;
-      margin-top: 10px;
       background: rgba(255, 255, 255, 0.1);
+      border: 1px solid #0ff;
+      margin-top: 8px;
     }
+
+    #scoreboard {
+      margin-top: 12px;
+      text-align: center;
+    }
+
+    #touch-controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    #touch-controls button {
+      padding: 10px;
+      font-size: 1rem;
+      background: #0ff;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 0 6px #0ff;
+    }
+
+    #highscores {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    #highscores h2 {
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+
+    #highscore-table {
+      width: 100%;
+      font-size: 0.7rem;
+    }
+
     #crt-flash {
       position: fixed;
       top: 0; left: 0;
-      width: 100vw; height: 100vh;
+      width: 100vw;
+      height: 100vh;
       background: white;
       opacity: 0;
       z-index: 9999;
       pointer-events: none;
     }
+
     @keyframes crt-flash {
-      0%   { opacity: 1; }
-      30%  { opacity: 0.4; }
-      60%  { opacity: 0.9; }
+      0% { opacity: 1; }
+      30% { opacity: 0.4; }
+      60% { opacity: 0.9; }
       100% { opacity: 0; }
     }
+
     #ready-overlay {
       position: fixed;
       top: 0;
@@ -126,8 +156,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      font-size: 3rem;
-      font-family: 'Press Start 2P', monospace;
+      font-size: 2rem;
       color: #0ff;
       background: rgba(0, 0, 0, 0.85);
       text-shadow: 0 0 10px #0ff;
@@ -135,14 +164,13 @@
       opacity: 0;
       transition: opacity 0.3s ease;
     }
-canvas {
-  touch-action: none;
-}
   </style>
 </head>
+
 <body>
   <div id="crt-flash"></div>
   <div id="ready-overlay">READY…</div>
+
   <audio id="coin-sound" src="coin.wav" preload="auto"></audio>
   <audio id="start-sound" src="https://velle999.github.io/tepris/start.mp3" preload="auto"></audio>
 
@@ -152,32 +180,29 @@ canvas {
     <div id="tetris-wrapper">
       <canvas id="preview-box" width="80" height="80"></canvas>
       <div id="game-area">
-        <div id="tetris-container">
-          <canvas id="tetris" width="200" height="400"></canvas>
-          <div id="landing-preview"></div>
-          <div id="scoreboard">
-            <div>Score: <span id="score">0</span></div>
-            <div>High Score: <span id="highScore">0</span></div>
-          </div>
-          <div id="touch-controls">
-            <button id="left-btn">⬅️</button>
-            <button id="rotate-btn">🔄</button>
-            <button id="right-btn">➡️</button>
-            <button id="down-btn">⬇️</button>
-          </div>
-          <div id="highscores">
-            <h2>🏆 High Scores 🏆</h2>
-            <table id="highscore-table"></table>
-          </div>
+        <canvas id="tetris"></canvas>
+        <div id="landing-preview"></div>
+        <div id="scoreboard">
+          <div>Score: <span id="score">0</span></div>
+          <div>High Score: <span id="highScore">0</span></div>
+        </div>
+
+        <div id="touch-controls">
+          <button id="left-btn">⬅️</button>
+          <button id="rotate-btn">🔄</button>
+          <button id="right-btn">➡️</button>
+          <button id="down-btn">⬇️</button>
+        </div>
+
+        <div id="highscores">
+          <h2>🏆 High Scores 🏆</h2>
+          <table id="highscore-table"></table>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ✅ Load Tepris game logic first -->
   <script src="tepris.js"></script>
-
-  <!-- ✅ THEN safely run DOM logic -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const toggleBtn = document.getElementById('tetris-toggle');
