@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function resizeCanvas() {
     const container = document.getElementById('tetris-container');
     const vw = container.clientWidth;
-    const vh = window.innerHeight - 160; // subtract layout overhead (scoreboard/buttons)
+    const vh = window.innerHeight - 160;
     blockSize = Math.max(12, Math.min(40, Math.floor(Math.min(vw / cols, vh / rows))));
     canvas.width = blockSize * cols;
     canvas.height = blockSize * rows;
@@ -225,31 +225,41 @@ document.addEventListener('DOMContentLoaded', () => {
     drawMatrix(next, { x: offsetX, y: offsetY }, previewCtx, previewBox.width / 4, '#0ff', 1);
   }
 
-  function resetPiece() {
-    current = next || randomPiece();
-    next = randomPiece();
-    pos.y = 0;
-    pos.x = ((cols / 2) | 0) - ((current[0].length / 2) | 0);
-    if (collide(arena, { matrix: current, pos })) {
-      console.warn('💀 GAME OVER');
-      arena = createMatrix(cols, rows);
-      score = 0;
+function resetPiece() {
+  current = next || randomPiece();
+  next = randomPiece();
+  pos.y = 0;
+  pos.x = ((cols / 2) | 0) - ((current[0].length / 2) | 0);
+
+  if (collide(arena, { matrix: current, pos })) {
+    console.warn('💀 GAME OVER');
+
+    // Only prompt for initials if it's a new high score
+    if (score > highScore) {
+      const initials = prompt("🏆 New High Score! Enter your initials:", "")
+        ?.toUpperCase()
+        .slice(0, 3) || "---";
+      localStorage.setItem('teprisHighScore', score);
+      localStorage.setItem('teprisHighInitials', initials);
     }
+
+    // Reset for new game
+    arena = createMatrix(cols, rows);
+    score = 0;
   }
+}
 
   function randomPiece() {
     const keys = Object.keys(pieces);
     return createPiece(keys[Math.floor(Math.random() * keys.length)]);
   }
 
-  function updateScore() {
-    scoreDisplay.textContent = score;
-    if (score > highScore) {
-      highScore = score;
-      localStorage.setItem('teprisHighScore', score);
-    }
-    highScoreDisplay.textContent = highScore;
-  }
+function updateScore() {
+  scoreDisplay.textContent = score;
+  highScore = parseInt(localStorage.getItem('teprisHighScore')) || 0;
+  const initials = localStorage.getItem('teprisHighInitials') || "---";
+  highScoreDisplay.textContent = `${highScore} (${initials})`;
+}
 
   function playSound(sound) {
     if (sound && typeof sound.play === 'function') {
@@ -292,83 +302,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  document.getElementById('left-btn')?.addEventListener('click', () => { pos.x--; if (collide(arena, { matrix: current, pos })) pos.x++; });
-  document.getElementById('right-btn')?.addEventListener('click', () => { pos.x++; if (collide(arena, { matrix: current, pos })) pos.x--; });
-  document.getElementById('down-btn')?.addEventListener('click', () => drop());
   document.getElementById('rotate-btn')?.addEventListener('click', () => rotatePiece(1));
+
+  // === Press-and-hold touch/mouse slide controls ===
+  const holdRepeatRate = 150;
+  let holdInterval = null;
+
+  function enableHoldControl(buttonId, actionFn) {
+    const btn = document.getElementById(buttonId);
+    if (!btn) return;
+
+    const clear = () => {
+      clearInterval(holdInterval);
+      holdInterval = null;
+    };
+
+    btn.addEventListener('pointerdown', () => {
+      actionFn();
+      holdInterval = setInterval(actionFn, holdRepeatRate);
+    });
+
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(evt =>
+      btn.addEventListener(evt, clear)
+    );
+  }
+
+  enableHoldControl('left-btn', () => {
+    pos.x--;
+    if (collide(arena, { matrix: current, pos })) pos.x++;
+  });
+
+  enableHoldControl('right-btn', () => {
+    pos.x++;
+    if (collide(arena, { matrix: current, pos })) pos.x--;
+  });
+
+  enableHoldControl('down-btn', () => drop());
 
   window.startTetris = startTetris;
 
-  let touchStartX = 0, touchStartY = 0;
-  canvas.addEventListener('touchstart', (e) => {
-    const touch = e.touches[0];
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
-  }, { passive: true });
-
-  canvas.addEventListener('touchend', (e) => {
-    const touch = e.changedTouches[0];
-    const dx = touch.clientX - touchStartX;
-    const dy = touch.clientY - touchStartY;
-    const absX = Math.abs(dx);
-    const absY = Math.abs(dy);
-    if (Math.max(absX, absY) < 20) return;
-
-    if (absX > absY) {
-      if (dx > 0) { pos.x++; if (collide(arena, { matrix: current, pos })) pos.x--; }
-      else { pos.x--; if (collide(arena, { matrix: current, pos })) pos.x++; }
-    } else {
-      if (dy > 0) hardDrop();
-      else rotatePiece(1);
-    }
-  }, { passive: true });
-
   resizeCanvas();
   resizePreviewBox();
-
-  let initialTouchY = null;
-
-  function handleTouchStart(e) {
-    if (!running || paused) return;
-    const touch = e.touches[0];
-    initialTouchX = touch.clientX;
-    initialTouchY = touch.clientY;
-  }
-
-  function handleTouchMove(e) {
-    if (!running || paused || initialTouchX === null || initialTouchY === null) return;
-
-    const touch = e.touches[0];
-    const deltaX = touch.clientX - initialTouchX;
-    const deltaY = touch.clientY - initialTouchY;
-
-    const horizontalThreshold = blockSize * 0.9;
-    const verticalThreshold = blockSize * 1.2;
-
-    if (deltaX <= -horizontalThreshold) {
-      move(-1);
-      initialTouchX = touch.clientX;
-    } else if (deltaX >= horizontalThreshold) {
-      move(1);
-      initialTouchX = touch.clientX;
-    }
-
-    if (deltaY >= verticalThreshold) {
-      drop();  // Soft drop
-      initialTouchY = touch.clientY;
-    } else if (deltaY <= -verticalThreshold * 1.5) {
-      hardDrop();  // Hard drop on flick up
-      initialTouchY = touch.clientY;
-    }
-  }
-
-  function handleTouchEnd() {
-    initialTouchX = null;
-    initialTouchY = null;
-  }
-
-  canvas.addEventListener('touchstart', handleTouchStart);
-  canvas.addEventListener('touchmove', handleTouchMove);
-  canvas.addEventListener('touchend', handleTouchEnd);
-
 });
