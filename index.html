@@ -147,30 +147,26 @@
   <div id="arcade-shell">
     <button id="tetris-toggle">🕹️ Insert Coin / Play</button>
 
-    <div id="tetris-wrapper">
-      <canvas id="preview-box" width="80" height="80"></canvas>
-      <div id="game-area">
-        <div id="tetris-container">
-          <canvas id="tetris" width="200" height="400"></canvas>
-          <div id="landing-preview"></div>
-          <div id="scoreboard">
-            <div>Score: <span id="score">0</span></div>
-            <div>High Score: <span id="highScore">0</span></div>
-          </div>
-          <div id="touch-controls">
-            <button id="left-btn">⬅️</button>
-            <button id="rotate-btn">🔄</button>
-            <button id="right-btn">➡️</button>
-            <button id="down-btn">⬇️</button>
-          </div>
-          <div id="highscores">
-            <h2>🏆 High Scores 🏆</h2>
-            <table id="highscore-table"></table>
-          </div>
-        </div>
+<div id="tetris-wrapper">
+  <canvas id="preview-box"></canvas>
+
+  <div id="game-area">
+    <div id="tetris-container">
+      <canvas id="tetris"></canvas>
+
+      <div id="landing-preview"></div>
+
+      <div id="scoreboard">
+        <div>Score: <span id="score">0</span></div>
+        <div>High Score: <span id="highScore">0</span></div>
       </div>
-    </div>
-  </div>
+
+      <div id="touch-controls">
+        <button id="left-btn">⬅️</button>
+        <button id="rotate-btn">🔄</button>
+        <button id="right-btn">➡️</button>
+        <button id="down-btn">⬇️</button>
+      </div>
 
   <!-- Main Game Logic -->
   <script src="tepris.js"></script>
