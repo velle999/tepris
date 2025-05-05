@@ -326,42 +326,45 @@ document.addEventListener('DOMContentLoaded', () => {
   resizeCanvas();
   resizePreviewBox();
 
-  let touchInterval = null;
-  let initialTouchX = null;
+  let initialTouchY = null;
 
   function handleTouchStart(e) {
     if (!running || paused) return;
     const touch = e.touches[0];
     initialTouchX = touch.clientX;
-
-    touchInterval = setInterval(() => {
-      if (!initialTouchX) return;
-      const deltaX = touch.clientX - initialTouchX;
-      if (deltaX < -10) {
-        move(-1); // Move left
-      } else if (deltaX > 10) {
-        move(1); // Move right
-      }
-    }, 100);
+    initialTouchY = touch.clientY;
   }
 
   function handleTouchMove(e) {
+    if (!running || paused || initialTouchX === null || initialTouchY === null) return;
+
     const touch = e.touches[0];
     const deltaX = touch.clientX - initialTouchX;
-    if (Math.abs(deltaX) > 10) {
-      if (deltaX < 0) {
-        move(-1); // Move left
-      } else {
-        move(1); // Move right
-      }
+    const deltaY = touch.clientY - initialTouchY;
+
+    const horizontalThreshold = blockSize * 0.9;
+    const verticalThreshold = blockSize * 1.2;
+
+    if (deltaX <= -horizontalThreshold) {
+      move(-1);
       initialTouchX = touch.clientX;
+    } else if (deltaX >= horizontalThreshold) {
+      move(1);
+      initialTouchX = touch.clientX;
+    }
+
+    if (deltaY >= verticalThreshold) {
+      drop();  // Soft drop
+      initialTouchY = touch.clientY;
+    } else if (deltaY <= -verticalThreshold * 1.5) {
+      hardDrop();  // Hard drop on flick up
+      initialTouchY = touch.clientY;
     }
   }
 
   function handleTouchEnd() {
-    clearInterval(touchInterval);
-    touchInterval = null;
     initialTouchX = null;
+    initialTouchY = null;
   }
 
   canvas.addEventListener('touchstart', handleTouchStart);
