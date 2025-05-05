@@ -222,7 +222,7 @@ html, body {
   }
 
   #tetris {
-    max-height: 60vh;
+    max-height: 52vh;
   }
 
   #preview-box {
@@ -241,6 +241,23 @@ html, body {
 
   #game-area {
     gap: 8px;
+  }
+
+  #touch-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+    width: 100%;
+    max-width: 320px;
+  }
+
+  #touch-controls button {
+    flex: 1 1 44%;
+    font-size: 1rem;
+    padding: 8px 12px;
+    border-radius: 6px;
   }
 } 
 
