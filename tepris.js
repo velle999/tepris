@@ -325,4 +325,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
   resizeCanvas();
   resizePreviewBox();
+
+  let touchInterval = null;
+  let initialTouchX = null;
+
+  function handleTouchStart(e) {
+    if (!running || paused) return;
+    const touch = e.touches[0];
+    initialTouchX = touch.clientX;
+
+    touchInterval = setInterval(() => {
+      if (!initialTouchX) return;
+      const deltaX = touch.clientX - initialTouchX;
+      if (deltaX < -10) {
+        move(-1); // Move left
+      } else if (deltaX > 10) {
+        move(1); // Move right
+      }
+    }, 100);
+  }
+
+  function handleTouchMove(e) {
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - initialTouchX;
+    if (Math.abs(deltaX) > 10) {
+      if (deltaX < 0) {
+        move(-1); // Move left
+      } else {
+        move(1); // Move right
+      }
+      initialTouchX = touch.clientX;
+    }
+  }
+
+  function handleTouchEnd() {
+    clearInterval(touchInterval);
+    touchInterval = null;
+    initialTouchX = null;
+  }
+
+  canvas.addEventListener('touchstart', handleTouchStart);
+  canvas.addEventListener('touchmove', handleTouchMove);
+  canvas.addEventListener('touchend', handleTouchEnd);
+
 });
