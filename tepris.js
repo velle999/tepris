@@ -6,7 +6,54 @@
 // Entry point on DOM load
 
 function addTouchControls() {
-  console.log("✅ Touch controls initialized (stub)");
+  console.log("✅ Touch controls initialized");
+
+  const leftBtn = document.getElementById('left-btn');
+  const rightBtn = document.getElementById('right-btn');
+  const rotateBtn = document.getElementById('rotate-btn');
+  const downBtn = document.getElementById('down-btn');
+  const hardDropBtn = document.getElementById('harddrop-btn');
+  const holdBtn = document.getElementById('hold-btn');
+
+  if (leftBtn) leftBtn.addEventListener('click', () => {
+    if (paused || !running) return;
+    pos.x--;
+    if (collide(arena, { matrix: current, pos })) pos.x++;
+  });
+
+  if (rightBtn) rightBtn.addEventListener('click', () => {
+    if (paused || !running) return;
+    pos.x++;
+    if (collide(arena, { matrix: current, pos })) pos.x--;
+  });
+
+  if (rotateBtn) rotateBtn.addEventListener('click', () => {
+    if (paused || !running) return;
+    rotatePiece(1);
+  });
+
+  if (downBtn) downBtn.addEventListener('click', () => {
+    if (paused || !running) return;
+    drop();
+  });
+
+  if (hardDropBtn) hardDropBtn.addEventListener('click', () => {
+    if (paused || !running) return;
+    navigator.vibrate?.([20, 40]);
+    hardDrop();
+  });
+
+  if (holdBtn) holdBtn.addEventListener('click', () => {
+    paused = !paused;
+    if (paused) {
+      bgMusic.pause();
+      console.log('⏸️ Game paused via hold button');
+    } else {
+      bgMusic.play().catch(err => console.warn("🔇 Music resume failed:", err));
+      requestAnimationFrame(update);
+      console.log('▶️ Game resumed via hold button');
+    }
+  });
 }
 
 let canvas, context, previewBox, previewCtx;
