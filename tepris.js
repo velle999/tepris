@@ -446,6 +446,12 @@ window.startTetris = function () {
 
   updateScore();
   addTouchControls();
+
+  // Ensure canvas touch handling is enforced
+  canvas.style.touchAction = 'none';
+  canvas.style.webkitUserSelect = 'none';
+  canvas.style.userSelect = 'none';
+  canvas.setAttribute('tabindex', '0');
   resizeCanvas();
   resizePreviewBox();
   draw(); // ✅ Force first visual frame
