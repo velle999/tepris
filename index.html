@@ -142,6 +142,7 @@
   <audio id="rotate-sound" src="boop.mp3" preload="auto"></audio>
   <audio id="bg-music" src="background.mp3" preload="auto" loop></audio>
   <audio id="points-sound" src="points.mp3" preload="auto"></audio>
+  <audio id="tetris-sound" src="tepris!.mp3" preload="auto"></audio>
 
   <!-- Game Container -->
   <div id="arcade-shell">
@@ -156,10 +157,12 @@
 
       <div id="landing-preview"></div>
 
-      <div id="scoreboard">
-        <div>Score: <span id="score">0</span></div>
-        <div>High Score: <span id="highScore">0</span></div>
-      </div>
+<div id="scoreboard">
+  <div>Score: <span id="score">0</span></div>
+  <div>High Score: <span id="highScore">---</span></div>
+  <div>Level: <span id="level">0</span></div>
+  <div>Lines: <span id="lines">0</span></div>
+</div>
 
       <div id="touch-controls">
         <button id="left-btn">⬅️</button>
@@ -172,30 +175,79 @@
   <script src="tepris.js"></script>
 
   <!-- UI + Boot -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const toggleBtn = document.getElementById('tetris-toggle');
-      const wrapper = document.getElementById('tetris-wrapper');
-      const flash = document.getElementById('crt-flash');
-      const coinSound = document.getElementById('coin-sound');
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggleBtn = document.getElementById('tetris-toggle');
+    const wrapper = document.getElementById('tetris-wrapper');
+    const flash = document.getElementById('crt-flash');
+    const coinSound = document.getElementById('coin-sound');
+    const bgMusic = document.getElementById('bg-music');
+    const rotateSound = document.getElementById('rotate-sound');
+    const pointsSound = document.getElementById('points-sound');
 
-      toggleBtn.addEventListener('pointerdown', () => {
-        console.log("🪙 Insert coin clicked!");
-        coinSound?.play();
+    let audioUnlocked = false;
+    let audioContext;
+
+    function unlockAudio() {
+      if (audioUnlocked) return Promise.resolve();
+
+      return new Promise((resolve, reject) => {
+        try {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          if (audioContext.state === 'suspended') {
+            audioContext.resume().then(() => console.log('🔊 AudioContext resumed'));
+          }
+
+          const sounds = [coinSound, rotateSound, bgMusic, pointsSound];
+          const unlocks = sounds.map(snd => {
+            if (!snd) return Promise.resolve();
+            return snd.play().then(() => {
+              snd.pause();
+              snd.currentTime = 0;
+            }).catch(err => {
+              console.warn(`🔇 Audio failed to unlock:`, err);
+              return Promise.resolve(); // ignore errors
+            });
+          });
+
+          Promise.all(unlocks).then(() => {
+            audioUnlocked = true;
+            resolve();
+          });
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }
+
+    toggleBtn.addEventListener('pointerdown', async () => {
+      console.log("🪙 Insert coin clicked!");
+
+      try {
+        await unlockAudio();
+
+        // Flash effect
         flash.style.animation = 'crt-flash 0.6s ease';
         setTimeout(() => flash.style.animation = '', 600);
 
+        // Play coin after unlock
+        coinSound.play().catch(() => {});
+
+        // Show game
         toggleBtn.style.display = 'none';
         wrapper.style.display = 'flex';
 
+        // Start game
         if (typeof startTetris === 'function') {
           startTetris();
         } else {
           console.warn('❌ startTetris is not defined.');
         }
-      });
+      } catch (err) {
+        console.error('🔇 Failed to unlock audio or start game:', err);
+      }
     });
-  </script>
-
+  });
+</script>
 </body>
 </html>

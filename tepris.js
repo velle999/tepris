@@ -1,4 +1,4 @@
-// ===== TEPRIS.JS - FULLY RESPONSIVE & ENHANCED =====
+// ===== TEPRIS.JS - FULLY RESPONSIVE & ENHANCED WITH MOBILE AUDIO + LEVEL SPEED + INITIALS ENTRY + SCOREBOARD =====
 
 document.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('tetris');
@@ -7,10 +7,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const previewCtx = previewBox?.getContext('2d');
   const scoreDisplay = document.getElementById('score');
   const highScoreDisplay = document.getElementById('highScore');
-  const startSound = document.getElementById('start-sound');
+  const startSound = document.getElementById('coin-sound');
   const rotateSound = document.getElementById('rotate-sound');
   const bgMusic = document.getElementById('bg-music');
   const pointsSound = document.getElementById('points-sound');
+  const tetrisSound = document.getElementById('tetris-sound');
+  const levelDisplay = document.getElementById('level');
+  const linesDisplay = document.getElementById('lines');
 
   const rows = 20;
   const cols = 10;
@@ -18,6 +21,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let score = 0;
   let highScore = parseInt(localStorage.getItem('teprisHighScore')) || 0;
+  let highScoreInitials = localStorage.getItem('teprisHighScoreInitials') || '---';
+  let level = 0;
+  let linesCleared = 0;
+
   let arena = createMatrix(cols, rows);
   let dropCounter = 0;
   let dropInterval = 1000;
@@ -30,12 +37,119 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let flashingCells = [];
   let flashStartTime = 0;
-  let flashDuration = 200;
+  let flashDuration = 400; // Slowed down for visibility
+
+
+function playSafe(sound) {
+  if (!sound || typeof sound.play !== 'function') {
+    console.warn(`🔇 Invalid sound object`, sound);
+    return;
+  }
+  try {
+    sound.pause();
+    sound.currentTime = 0;
+    const playPromise = sound.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => console.log(`🔊 Played sound: ${sound.id || 'unknown'}`))
+        .catch(err => console.warn(`🔇 Playback failed for [${sound.id || 'sound'}]:`, err));
+    }
+  } catch (e) {
+    console.warn(`🔇 Error during playSafe [${sound.id || 'sound'}]:`, e);
+  }
+}
+
+let lastTap = 0;
+
+function addTouchControls() {
+  let startX = 0;
+  let startY = 0;
+  let moved = false;
+  let longPressTimer = null;
+  const threshold = 30;
+
+  window.addEventListener('touchstart', e => {
+    if (!e.touches || e.touches.length > 2) return;
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+    moved = false;
+    longPressTimer = setTimeout(() => {
+      navigator.vibrate?.(100);
+      hardDrop();
+    }, 400);
+  });
+
+  window.addEventListener('touchmove', e => {
+    if (!e.touches || e.touches.length > 2) return;
+    clearTimeout(longPressTimer);
+    const t = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (Math.abs(dx) > threshold) {
+        moved = true;
+        navigator.vibrate?.(25);
+        if (dx > 0) {
+          pos.x++;
+          if (collide(arena, { matrix: current, pos })) pos.x--;
+        } else {
+          pos.x--;
+          if (collide(arena, { matrix: current, pos })) pos.x++;
+        }
+        startX = t.clientX;
+      }
+    } else if (Math.abs(dy) > threshold && dy > 0) {
+      moved = true;
+      navigator.vibrate?.(15);
+      drop();
+      startY = t.clientY;
+    }
+  });
+
+  window.addEventListener('touchend', e => {
+    clearTimeout(longPressTimer);
+    if (e.changedTouches.length === 2) {
+      navigator.vibrate?.([30, 30, 30]);
+      hardDrop();
+      return;
+    }
+    if (moved) return;
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      paused = !paused;
+      if (paused) {
+        bgMusic.pause();
+        console.log('⏸️ Paused by touch');
+      } else {
+        bgMusic.play().catch(err => console.warn("🔇 Music resume failed:", err));
+        requestAnimationFrame(update);
+        console.log('▶️ Resumed by touch');
+      }
+      lastTap = 0;
+    } else {
+      navigator.vibrate?.(10);
+      rotatePiece(1);
+      lastTap = now;
+    }
+  });
+}
+
+  function promptInitials() {
+    const initials = prompt("🎉 NEW HIGH SCORE! Enter your initials:", highScoreInitials || '---');
+    if (initials) {
+      const clean = initials.toUpperCase().substring(0, 3);
+      localStorage.setItem('teprisHighScoreInitials', clean);
+      return clean;
+    }
+    return highScoreInitials;
+  }
 
   function resizeCanvas() {
-    const container = document.getElementById('tetris-container');
+    const container = document.getElementById('tetris-container') || document.body;
     const vw = container.clientWidth;
-    const vh = window.innerHeight - 160; // subtract layout overhead (scoreboard/buttons)
+    const vh = window.innerHeight - 160;
     blockSize = Math.max(12, Math.min(40, Math.floor(Math.min(vw / cols, vh / rows))));
     canvas.width = blockSize * cols;
     canvas.height = blockSize * rows;
@@ -51,11 +165,6 @@ document.addEventListener('DOMContentLoaded', () => {
     previewBox.style.width = `${size}px`;
     previewBox.style.height = `${size}px`;
   }
-
-  window.addEventListener('resize', () => {
-    resizeCanvas();
-    resizePreviewBox();
-  });
 
   const pieces = {
     I: [[1, 1, 1, 1]],
@@ -98,6 +207,29 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.restore();
   }
 
+  function drawGhostPiece() {
+    if (!current) return;
+    let ghostY = pos.y;
+    while (!collide(arena, { matrix: current, pos: { x: pos.x, y: ghostY + 1 } })) {
+      ghostY++;
+    }
+    drawMatrix(current, { x: pos.x, y: ghostY }, context, blockSize, '#888', 0.3);
+  }
+
+  function draw() {
+    context.fillStyle = '#111';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    drawMatrix(arena, { x: 0, y: 0 });
+    drawGhostPiece();
+    if (current) drawMatrix(current, pos);
+
+    if (previewBox && next) {
+      previewCtx.clearRect(0, 0, previewBox.width, previewBox.height);
+      const scale = Math.floor(previewBox.width / 4);
+      drawMatrix(next, { x: 1, y: 1 }, previewCtx, scale, '#0f0', 0.8);
+    }
+  }
+
   function merge(arena, player) {
     player.matrix.forEach((row, y) => {
       row.forEach((val, x) => {
@@ -131,7 +263,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const rotated = rotateMatrix(current, dir);
     const oldX = pos.x;
     let offset = 1;
-
     while (collide(arena, { matrix: rotated, pos })) {
       pos.x += offset;
       offset = -(offset + (offset > 0 ? 1 : -1));
@@ -141,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     current = rotated;
-    playSound(rotateSound);
+    playSafe(rotateSound);
   }
 
   function drop() {
@@ -165,64 +296,63 @@ document.addEventListener('DOMContentLoaded', () => {
     updateScore();
   }
 
+
   function sweep() {
     flashingCells = [];
+    let rowsToClear = [];
+
     for (let y = rows - 1; y >= 0; y--) {
       if (arena[y].every(val => val !== 0)) {
+        rowsToClear.push(y);
+      }
+    }
+
+    if (rowsToClear.length > 0) {
+      rowsToClear.forEach(y => {
         for (let x = 0; x < cols; x++) {
           flashingCells.push({ x, y });
         }
+      });
+
+      flashStartTime = performance.now();
+
+      // Immediately play sound if it's a Tetris (before any delay)
+      if (rowsToClear.length === 4) {
+        console.log("🎉 TETRIS! Triggering sound early.");
+        playSafe(tetrisSound);
+        triggerTetrisEffect();
       }
+
+      setTimeout(() => {
+        rowsToClear.sort((a, b) => a - b); // Ensure proper top-down removal
+        rowsToClear.forEach(y => {
+          arena.splice(y, 1);
+          arena.unshift(Array(cols).fill(0));
+        });
+
+        linesCleared += rowsToClear.length;
+        score += rowsToClear.length === 4 ? 1200 : rowsToClear.length * 100;
+        level = Math.floor(linesCleared / 10);
+        dropInterval = Math.max(100, 1000 - level * 100);
+
+        updateScore();
+      }, flashDuration);
     }
-    if (flashingCells.length) flashStartTime = performance.now();
   }
 
-  function update(time = 0) {
-    const delta = time - lastTime;
-    lastTime = time;
-    dropCounter += delta;
-
-    if (!paused && dropCounter > dropInterval) drop();
-    draw();
-
-    if (flashingCells.length && performance.now() - flashStartTime > flashDuration) {
-      const rowsToClear = [...new Set(flashingCells.map(c => c.y))];
-      if (rowsToClear.length > 0) playSound(pointsSound);
-      for (let y of rowsToClear.sort((a, b) => b - a)) {
-        arena.splice(y, 1);
-        arena.unshift(new Array(cols).fill(0));
-        score += 10;
-      }
-      flashingCells = [];
-      updateScore();
-    }
-
-    if (running) requestAnimationFrame(update);
+  function triggerTetrisEffect() {
+    const canvasWrapper = document.getElementById('tetris-container') || document.body;
+    canvasWrapper.classList.add('tetris-flash');
+    setTimeout(() => {
+      canvasWrapper.classList.remove('tetris-flash');
+    }, 500);
   }
 
-  function draw() {
-    context.fillStyle = '#111';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    drawMatrix(arena, { x: 0, y: 0 });
-    drawGhostPiece();
-    drawMatrix(current, pos);
-    drawPreview();
-  }
-
-  function drawGhostPiece() {
-    if (!current) return;
-    const ghostPos = { x: pos.x, y: pos.y };
-    while (!collide(arena, { matrix: current, pos: ghostPos })) ghostPos.y++;
-    ghostPos.y--;
-    drawMatrix(current, ghostPos, context, blockSize, '#0ff', 0.2);
-  }
-
-  function drawPreview() {
-    if (!previewCtx || !next) return;
-    previewCtx.clearRect(0, 0, previewBox.width, previewBox.height);
-    const offsetX = ((4 - next[0].length) / 2) | 0;
-    const offsetY = ((4 - next.length) / 2) | 0;
-    drawMatrix(next, { x: offsetX, y: offsetY }, previewCtx, previewBox.width / 4, '#0ff', 1);
+  function updateScore() {
+    scoreDisplay.textContent = score;
+    highScoreDisplay.textContent = `${highScoreInitials} ${highScore}`;
+    if (levelDisplay) levelDisplay.textContent = level;
+    if (linesDisplay) linesDisplay.textContent = linesCleared;
   }
 
   function resetPiece() {
@@ -232,8 +362,17 @@ document.addEventListener('DOMContentLoaded', () => {
     pos.x = ((cols / 2) | 0) - ((current[0].length / 2) | 0);
     if (collide(arena, { matrix: current, pos })) {
       console.warn('💀 GAME OVER');
+      if (score > highScore) {
+        highScore = score;
+        highScoreInitials = promptInitials();
+        localStorage.setItem('teprisHighScore', score);
+      }
       arena = createMatrix(cols, rows);
       score = 0;
+      level = 0;
+      linesCleared = 0;
+      dropInterval = 1000;
+      updateScore();
     }
   }
 
@@ -242,34 +381,121 @@ document.addEventListener('DOMContentLoaded', () => {
     return createPiece(keys[Math.floor(Math.random() * keys.length)]);
   }
 
-  function updateScore() {
-    scoreDisplay.textContent = score;
-    if (score > highScore) {
-      highScore = score;
-      localStorage.setItem('teprisHighScore', score);
+  function update(time = 0) {
+    const deltaTime = time - lastTime;
+    lastTime = time;
+    dropCounter += deltaTime;
+    if (dropCounter > dropInterval) {
+      drop();
     }
-    highScoreDisplay.textContent = highScore;
+    draw();
+    if (running) requestAnimationFrame(update);
   }
 
-  function playSound(sound) {
-    if (sound && typeof sound.play === 'function') {
-      sound.currentTime = 0;
-      const playPromise = sound.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(err => console.warn(`🔇 Sound play error [${sound.id}]:`, err));
+  document.addEventListener('keydown', event => {
+    if (!running) return;
+
+    if (event.key.toLowerCase() === 'p' || event.key === 'Enter') {
+      paused = !paused;
+      console.log(paused ? '⏸️ Game paused' : '▶️ Game resumed');
+      if (paused) {
+        bgMusic.pause();
+      } else {
+        bgMusic.play().catch(err => console.warn("🔇 Music resume failed:", err));
+        requestAnimationFrame(update); // Resume loop on unpause
+      }
+      return;
+    }
+
+    if (paused) return;
+
+    switch (event.key) {
+      case 'ArrowLeft':
+        pos.x--;
+        if (collide(arena, { matrix: current, pos })) pos.x++;
+        break;
+      case 'ArrowRight':
+        pos.x++;
+        if (collide(arena, { matrix: current, pos })) pos.x--;
+        break;
+      case 'ArrowDown':
+        drop();
+        break;
+      case 'ArrowUp':
+        rotatePiece(1);
+        break;
+      case ' ':
+        hardDrop();
+        break;
+    }
+  });
+
+  function update(time = 0) {
+    if (paused) return;
+
+    const deltaTime = time - lastTime;
+    lastTime = time;
+    dropCounter += deltaTime;
+
+    if (dropCounter > dropInterval) {
+      drop();
+    }
+
+    draw();
+    if (running) requestAnimationFrame(update);
+  }
+
+  function sweep() {
+    flashingCells = [];
+    let rowsToClear = [];
+
+    for (let y = rows - 1; y >= 0; y--) {
+      if (arena[y].every(val => val !== 0)) {
+        rowsToClear.push(y);
       }
     }
+
+    if (rowsToClear.length > 0) {
+      rowsToClear.forEach(y => {
+        for (let x = 0; x < cols; x++) {
+          flashingCells.push({ x, y });
+        }
+      });
+
+      flashStartTime = performance.now();
+
+      setTimeout(() => {
+        rowsToClear.sort((a, b) => a - b);
+        rowsToClear.forEach(y => {
+          arena.splice(y, 1);
+          arena.unshift(Array(cols).fill(0));
+        });
+
+        linesCleared += rowsToClear.length;
+        score += rowsToClear.length === 4 ? 1200 : rowsToClear.length * 100;
+        level = Math.floor(linesCleared / 10);
+        dropInterval = Math.max(100, 1000 - level * 100);
+
+        if (rowsToClear.length === 4) {
+          console.log("🎉 TETRIS! Triggering sound late.");
+          playSafe(tetrisSound);
+          triggerTetrisEffect();
+        } else {
+          playSafe(pointsSound);
+        }
+
+        updateScore();
+      }, flashDuration);
+    }
   }
 
-  function startTetris() {
+addTouchControls();
+
+  window.startTetris = function startTetris() {
     if (running) return;
-    try {
-      startSound?.play();
-      bgMusic.volume = 0.5;
-      bgMusic.play().catch(e => console.warn('🔇 Background music blocked:', e.message));
-    } catch (e) {
-      console.warn('🔇 Audio blocked:', e.message);
-    }
+    playSafe(startSound);
+    bgMusic.volume = 0.5;
+    playSafe(bgMusic);
     arena = createMatrix(cols, rows);
     current = randomPiece();
     next = randomPiece();
@@ -278,50 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resizePreviewBox();
     running = true;
     update();
-  }
-
-  document.addEventListener('keydown', e => {
-    if (!running) return;
-    switch (e.key) {
-      case 'ArrowLeft': pos.x--; if (collide(arena, { matrix: current, pos })) pos.x++; break;
-      case 'ArrowRight': pos.x++; if (collide(arena, { matrix: current, pos })) pos.x--; break;
-      case 'ArrowDown': drop(); break;
-      case 'ArrowUp': rotatePiece(1); break;
-      case ' ': hardDrop(); break;
-      case 'Enter': paused = !paused; break;
-    }
-  });
-
-  document.getElementById('left-btn')?.addEventListener('click', () => { pos.x--; if (collide(arena, { matrix: current, pos })) pos.x++; });
-  document.getElementById('right-btn')?.addEventListener('click', () => { pos.x++; if (collide(arena, { matrix: current, pos })) pos.x--; });
-  document.getElementById('down-btn')?.addEventListener('click', () => drop());
-  document.getElementById('rotate-btn')?.addEventListener('click', () => rotatePiece(1));
-
-  window.startTetris = startTetris;
-
-  let touchStartX = 0, touchStartY = 0;
-  canvas.addEventListener('touchstart', (e) => {
-    const touch = e.touches[0];
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
-  }, { passive: true });
-
-  canvas.addEventListener('touchend', (e) => {
-    const touch = e.changedTouches[0];
-    const dx = touch.clientX - touchStartX;
-    const dy = touch.clientY - touchStartY;
-    const absX = Math.abs(dx);
-    const absY = Math.abs(dy);
-    if (Math.max(absX, absY) < 20) return;
-
-    if (absX > absY) {
-      if (dx > 0) { pos.x++; if (collide(arena, { matrix: current, pos })) pos.x--; }
-      else { pos.x--; if (collide(arena, { matrix: current, pos })) pos.x++; }
-    } else {
-      if (dy > 0) hardDrop();
-      else rotatePiece(1);
-    }
-  }, { passive: true });
+  };
 
   resizeCanvas();
   resizePreviewBox();

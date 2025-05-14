@@ -214,6 +214,16 @@ html, body {
   100% { opacity: 0; }
 }
 
+@keyframes flashPulse {
+  0% { filter: brightness(1.5) saturate(1.5); }
+  50% { filter: brightness(2) saturate(2); }
+  100% { filter: brightness(1.5) saturate(1.5); }
+}
+
+.tetris-flash {
+  animation: flashPulse 0.5s ease-in-out;
+}
+
 /* === Responsive Tweaks === */
 @media (max-width: 600px) {
   #tetris-container {
