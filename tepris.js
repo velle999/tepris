@@ -1,10 +1,5 @@
 // ===== TEPRIS.JS - FULLY RESPONSIVE & ENHANCED WITH MOBILE AUDIO + LEVEL SPEED + INITIALS ENTRY + SCOREBOARD =====
 
-// This is the clean and fully edited version of your Tepris game logic.
-// It removes duplicate functions, repairs control logic, stabilizes gameplay loop, and includes full mobile touch/vibration support.
-
-// Entry point on DOM load
-
 function addTouchControls() {
   console.log("✅ Touch controls initialized");
 
@@ -22,7 +17,7 @@ function addTouchControls() {
       navigator.vibrate?.(100);
       hardDrop();
     }, 400);
-  });
+  }, { passive: true });
 
   window.addEventListener('touchmove', e => {
     if (!e.touches || e.touches.length > 2) return;
@@ -50,10 +45,11 @@ function addTouchControls() {
       drop();
       startY = t.clientY;
     }
-  });
+  }, { passive: true });
 
   window.addEventListener('touchend', e => {
     clearTimeout(longPressTimer);
+    if (!e.changedTouches) return;
     if (e.changedTouches.length === 2) {
       navigator.vibrate?.([30, 30, 30]);
       hardDrop();
@@ -77,44 +73,31 @@ function addTouchControls() {
       rotatePiece(1);
       lastTap = now;
     }
-  });
+  }, { passive: true });
 
-  const leftBtn = document.getElementById('left-btn');
-  const rightBtn = document.getElementById('right-btn');
-  const rotateBtn = document.getElementById('rotate-btn');
-  const downBtn = document.getElementById('down-btn');
-  const hardDropBtn = document.getElementById('harddrop-btn');
-  const holdBtn = document.getElementById('hold-btn');
+  const bindButton = (id, fn) => {
+    const btn = document.getElementById(id);
+    if (btn) btn.addEventListener('click', () => {
+      if (paused || !running) return;
+      fn();
+    });
+  };
 
-  if (leftBtn) leftBtn.addEventListener('click', () => {
-    if (paused || !running) return;
+  bindButton('left-btn', () => {
     pos.x--;
     if (collide(arena, { matrix: current, pos })) pos.x++;
   });
-
-  if (rightBtn) rightBtn.addEventListener('click', () => {
-    if (paused || !running) return;
+  bindButton('right-btn', () => {
     pos.x++;
     if (collide(arena, { matrix: current, pos })) pos.x--;
   });
-
-  if (rotateBtn) rotateBtn.addEventListener('click', () => {
-    if (paused || !running) return;
-    rotatePiece(1);
-  });
-
-  if (downBtn) downBtn.addEventListener('click', () => {
-    if (paused || !running) return;
-    drop();
-  });
-
-  if (hardDropBtn) hardDropBtn.addEventListener('click', () => {
-    if (paused || !running) return;
+  bindButton('rotate-btn', () => rotatePiece(1));
+  bindButton('down-btn', () => drop());
+  bindButton('harddrop-btn', () => {
     navigator.vibrate?.([20, 40]);
     hardDrop();
   });
-
-  if (holdBtn) holdBtn.addEventListener('click', () => {
+  bindButton('hold-btn', () => {
     paused = !paused;
     if (paused) {
       bgMusic.pause();
