@@ -8,6 +8,77 @@
 function addTouchControls() {
   console.log("✅ Touch controls initialized");
 
+  let startX = 0, startY = 0, moved = false, longPressTimer = null;
+  const threshold = 30, doubleTapGap = 300;
+  let lastTap = 0;
+
+  window.addEventListener('touchstart', e => {
+    if (!e.touches || e.touches.length > 2) return;
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+    moved = false;
+    longPressTimer = setTimeout(() => {
+      navigator.vibrate?.(100);
+      hardDrop();
+    }, 400);
+  });
+
+  window.addEventListener('touchmove', e => {
+    if (!e.touches || e.touches.length > 2) return;
+    clearTimeout(longPressTimer);
+    const t = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (Math.abs(dx) > threshold) {
+        moved = true;
+        navigator.vibrate?.(25);
+        if (dx > 0) {
+          pos.x++;
+          if (collide(arena, { matrix: current, pos })) pos.x--;
+        } else {
+          pos.x--;
+          if (collide(arena, { matrix: current, pos })) pos.x++;
+        }
+        startX = t.clientX;
+      }
+    } else if (Math.abs(dy) > threshold && dy > 0) {
+      moved = true;
+      navigator.vibrate?.(15);
+      drop();
+      startY = t.clientY;
+    }
+  });
+
+  window.addEventListener('touchend', e => {
+    clearTimeout(longPressTimer);
+    if (e.changedTouches.length === 2) {
+      navigator.vibrate?.([30, 30, 30]);
+      hardDrop();
+      return;
+    }
+    if (moved) return;
+    const now = Date.now();
+    if (now - lastTap < doubleTapGap) {
+      paused = !paused;
+      if (paused) {
+        bgMusic.pause();
+        console.log('⏸️ Paused by double-tap');
+      } else {
+        bgMusic.play().catch(err => console.warn("🔇 Music resume failed:", err));
+        requestAnimationFrame(update);
+        console.log('▶️ Resumed by double-tap');
+      }
+      lastTap = 0;
+    } else {
+      navigator.vibrate?.(10);
+      rotatePiece(1);
+      lastTap = now;
+    }
+  });
+
   const leftBtn = document.getElementById('left-btn');
   const rightBtn = document.getElementById('right-btn');
   const rotateBtn = document.getElementById('rotate-btn');
