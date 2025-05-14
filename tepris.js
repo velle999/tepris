@@ -1,5 +1,10 @@
 // ===== TEPRIS.JS - FULLY RESPONSIVE & ENHANCED WITH MOBILE AUDIO + LEVEL SPEED + INITIALS ENTRY + SCOREBOARD =====
 
+// This is the clean and fully edited version of your Tepris game logic.
+// It removes duplicate functions, repairs control logic, stabilizes gameplay loop, and includes full mobile touch/vibration support.
+
+// Entry point on DOM load
+
 function addTouchControls() {
   console.log("✅ Touch controls initialized");
 
@@ -17,7 +22,7 @@ function addTouchControls() {
       navigator.vibrate?.(100);
       hardDrop();
     }, 400);
-  }, { passive: true });
+  });
 
   window.addEventListener('touchmove', e => {
     if (!e.touches || e.touches.length > 2) return;
@@ -45,11 +50,10 @@ function addTouchControls() {
       drop();
       startY = t.clientY;
     }
-  }, { passive: true });
+  });
 
   window.addEventListener('touchend', e => {
     clearTimeout(longPressTimer);
-    if (!e.changedTouches) return;
     if (e.changedTouches.length === 2) {
       navigator.vibrate?.([30, 30, 30]);
       hardDrop();
@@ -73,36 +77,53 @@ function addTouchControls() {
       rotatePiece(1);
       lastTap = now;
     }
-  }, { passive: true });
+  });
 
-  const bindButton = (id, fn) => {
-    const btn = document.getElementById(id);
-    if (btn) btn.addEventListener('click', () => {
-      if (paused || !running) return;
-      fn();
-    });
-  };
+  const leftBtn = document.getElementById('left-btn');
+  const rightBtn = document.getElementById('right-btn');
+  const rotateBtn = document.getElementById('rotate-btn');
+  const downBtn = document.getElementById('down-btn');
+  const hardDropBtn = document.getElementById('harddrop-btn');
+  const holdBtn = document.getElementById('hold-btn');
 
-  bindButton('left-btn', () => {
+  if (leftBtn) leftBtn.addEventListener('click', () => {
+    if (paused || !running) return;
     pos.x--;
     if (collide(arena, { matrix: current, pos })) pos.x++;
   });
-  bindButton('right-btn', () => {
+
+  if (rightBtn) rightBtn.addEventListener('click', () => {
+    if (paused || !running) return;
     pos.x++;
     if (collide(arena, { matrix: current, pos })) pos.x--;
   });
-  bindButton('rotate-btn', () => rotatePiece(1));
-  bindButton('down-btn', () => drop());
-  bindButton('harddrop-btn', () => {
+
+  if (rotateBtn) rotateBtn.addEventListener('click', () => {
+    if (paused || !running) return;
+    rotatePiece(1);
+  });
+
+  if (downBtn) downBtn.addEventListener('click', () => {
+    if (paused || !running) return;
+    drop();
+  });
+
+  if (hardDropBtn) hardDropBtn.addEventListener('click', () => {
+    if (paused || !running) return;
     navigator.vibrate?.([20, 40]);
     hardDrop();
   });
-  bindButton('hold-btn', () => {
+
+  if (holdBtn) holdBtn.addEventListener('click', () => {
     paused = !paused;
     if (paused) {
       bgMusic.pause();
       console.log('⏸️ Game paused via hold button');
     } else {
+      if (!running) {
+        running = true;
+        console.log('▶️ Starting game loop from hold button');
+      }
       bgMusic.play().catch(err => console.warn("🔇 Music resume failed:", err));
       requestAnimationFrame(update);
       console.log('▶️ Game resumed via hold button');
@@ -115,6 +136,7 @@ let scoreDisplay, highScoreDisplay, levelDisplay, linesDisplay;
 let startSound, rotateSound, bgMusic, pointsSound, tetrisSound;
 
 let rows = 20, cols = 10, blockSize = 20;
+let hold = null, canHold = true;
 let arena, current, next, pos, running = false, paused = false;
 let dropCounter = 0, dropInterval = 1000, lastTime = 0;
 let score = 0, highScore = 0, highScoreInitials = '---';
@@ -194,6 +216,7 @@ function merge(arena, player) {
 }
 
 function resetPiece() {
+  canHold = true;
   current = next || randomPiece();
   next = randomPiece();
   pos.y = 0;
@@ -367,7 +390,63 @@ function resizePreviewBox() {
   previewBox.style.height = `${size}px`;
 }
 
+
+document.addEventListener('keydown', (event) => {
+  if (!running) return;
+  if (event.key.toLowerCase() === 'p' || event.key === 'Enter') {
+    paused = !paused;
+    if (paused) {
+      bgMusic.pause();
+      console.log(`⏸️ Paused via ${event.key === 'Enter' ? 'Enter' : 'P'} key`);
+    } else {
+      bgMusic.play().catch(err => console.warn("🔇 Music resume failed:", err));
+      requestAnimationFrame(update);
+      console.log(`▶️ Resumed via ${event.key === 'Enter' ? 'Enter' : 'P'} key`);
+    }
+    return;
+  }
+  if (paused) return;
+  switch (event.key) {
+    case 'ArrowLeft':
+      pos.x--;
+      if (collide(arena, { matrix: current, pos })) pos.x++;
+      break;
+    case 'ArrowRight':
+      pos.x++;
+      if (collide(arena, { matrix: current, pos })) pos.x--;
+      break;
+    case 'ArrowDown':
+      drop();
+      break;
+    case 'ArrowUp':
+      rotatePiece(1);
+      break;
+    case ' ':
+      hardDrop();
+      break;
+    case 'Shift':
+      if (!canHold) break;
+      if (!hold) {
+        hold = current;
+        current = next;
+        next = randomPiece();
+      } else {
+        const temp = current;
+        current = hold;
+        hold = temp;
+      }
+      pos = { x: ((cols / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
+      canHold = false;
+      console.log('🔁 Swapped with hold piece');
+      break;
+  }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
+  window.startTetris = () => {
+    const btn = document.getElementById('tetris-toggle');
+    if (btn) btn.click();
+  };
   canvas = document.getElementById('tetris');
   context = canvas.getContext('2d');
   previewBox = document.getElementById('preview-box');
@@ -387,58 +466,31 @@ document.addEventListener('DOMContentLoaded', () => {
   highScore = parseInt(localStorage.getItem('teprisHighScore')) || 0;
   highScoreInitials = localStorage.getItem('teprisHighScoreInitials') || '---';
 
-  arena = createMatrix(cols, rows);
-  pos = { x: 0, y: 0 };
+  document.getElementById('tetris-toggle')?.addEventListener('click', () => {
+    playSafe(startSound);
+    bgMusic.volume = 0.5;
+    playSafe(bgMusic);
 
-  resizeCanvas();
-  resizePreviewBox();
+    arena = createMatrix(cols, rows);
+    current = randomPiece();
+    next = randomPiece();
+    pos = { x: ((cols / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
 
-  document.addEventListener('keydown', (event) => {
-    if (!running) return;
-    if (event.key.toLowerCase() === 'p' || event.key === 'Enter') {
-      paused = !paused;
-      if (paused) {
-        bgMusic.pause();
-      } else {
-        bgMusic.play().catch(err => console.warn("🔇 Music resume failed:", err));
-        requestAnimationFrame(update);
-      }
-      return;
-    }
-    if (paused) return;
-    switch (event.key) {
-      case 'ArrowLeft': pos.x--; if (collide(arena, { matrix: current, pos })) pos.x++; break;
-      case 'ArrowRight': pos.x++; if (collide(arena, { matrix: current, pos })) pos.x--; break;
-      case 'ArrowDown': drop(); break;
-      case 'ArrowUp': rotatePiece(1); break;
-      case ' ': hardDrop(); break;
-    }
+    updateScore();
+    addTouchControls();
+
+    canvas.style.touchAction = 'none';
+    canvas.style.webkitUserSelect = 'none';
+    canvas.style.userSelect = 'none';
+    canvas.setAttribute('tabindex', '0');
+    canvas.addEventListener('focus', () => console.log('🧠 Canvas focused'));
+    setTimeout(() => canvas.focus(), 100);
+    resizeCanvas();
+    resizePreviewBox();
+    draw();
+    drop();
+
+    running = true;
+    requestAnimationFrame(update);
   });
 });
-
-window.startTetris = function () {
-  if (running) return;
-  playSafe(startSound);
-  bgMusic.volume = 0.5;
-  playSafe(bgMusic);
-
-  arena = createMatrix(cols, rows);
-  current = randomPiece();
-  next = randomPiece();
-  pos = { x: ((cols / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
-
-  updateScore();
-  addTouchControls();
-
-  // Ensure canvas touch handling is enforced
-  canvas.style.touchAction = 'none';
-  canvas.style.webkitUserSelect = 'none';
-  canvas.style.userSelect = 'none';
-  canvas.setAttribute('tabindex', '0');
-  resizeCanvas();
-  resizePreviewBox();
-  draw(); // ✅ Force first visual frame
-
-  running = true;
-  requestAnimationFrame(update);
-};
