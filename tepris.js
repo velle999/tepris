@@ -79,6 +79,121 @@ function addTouchControls() {
     }
   });
 
+// Add Xbox Controller Support with proper DAS + ARR for D-Pad (fixed and simplified to match analog behavior)
+let lastInputTime = 0;
+let lastButtonStates = [];
+
+const dpadState = {
+  left: false,
+  right: false,
+  down: false
+};
+
+const cooldown = 150;
+
+function addGamepadControls() {
+  window.addEventListener("gamepadconnected", (e) => {
+    console.log("🎮 Gamepad connected:", e.gamepad);
+    pollGamepad();
+  });
+}
+
+function pollGamepad() {
+  const gamepads = navigator.getGamepads?.() || [];
+  const gp = gamepads[0];
+  if (!gp) return requestAnimationFrame(pollGamepad);
+
+  const now = performance.now();
+  const threshold = 0.5;
+  const [lx, ly] = [gp.axes[0], gp.axes[1]];
+
+  const dpadLeft = gp.buttons[14]?.pressed;
+  const dpadRight = gp.buttons[15]?.pressed;
+  const dpadDown = gp.buttons[13]?.pressed;
+
+  if (!paused && running) {
+    // Analog stick movement
+    if (lx < -threshold && now - lastInputTime > cooldown) {
+      pos.x--;
+      if (collide(arena, { matrix: current, pos })) pos.x++;
+      lastInputTime = now;
+    } else if (lx > threshold && now - lastInputTime > cooldown) {
+      pos.x++;
+      if (collide(arena, { matrix: current, pos })) pos.x--;
+      lastInputTime = now;
+    }
+
+    // D-pad movement using same cooldown as stick
+    if (dpadLeft && !dpadState.left && now - lastInputTime > cooldown) {
+      pos.x--;
+      if (collide(arena, { matrix: current, pos })) pos.x++;
+      lastInputTime = now;
+    }
+    if (dpadRight && !dpadState.right && now - lastInputTime > cooldown) {
+      pos.x++;
+      if (collide(arena, { matrix: current, pos })) pos.x--;
+      lastInputTime = now;
+    }
+    if (dpadDown && !dpadState.down && now - lastInputTime > cooldown) {
+      drop();
+      lastInputTime = now;
+    }
+  }
+
+  // Track previous D-pad states
+  dpadState.left = dpadLeft;
+  dpadState.right = dpadRight;
+  dpadState.down = dpadDown;
+
+  if (running || !paused) {
+    gp.buttons.forEach((btn, index) => {
+      const wasPressed = lastButtonStates[index];
+      const justPressed = btn.pressed && !wasPressed;
+
+      if (justPressed) {
+        switch (index) {
+          case 0: rotatePiece(1); break;
+          case 1: hardDrop(); break;
+          case 2:
+            if (!canHold) return;
+            if (!hold) {
+              hold = current;
+              current = next;
+              next = randomPiece();
+            } else {
+              [current, hold] = [hold, current];
+            }
+            pos = { x: ((cols / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
+            canHold = false;
+            break;
+          case 8:
+            playSafe(startSound);
+            console.log("🪙 Insert Coin button pressed");
+            break;
+          case 9:
+            paused = !paused;
+            if (paused) {
+              bgMusic.pause();
+              console.log("⏸️ Game paused via Start button");
+            } else {
+              bgMusic.play().catch(err => console.warn("🔇 Music resume failed:", err));
+              requestAnimationFrame(update);
+              console.log("▶️ Game resumed via Start button");
+            }
+            break;
+        }
+      }
+    });
+
+    lastButtonStates = gp.buttons.map(b => b.pressed);
+  }
+
+  requestAnimationFrame(pollGamepad);
+}
+
+// Add gamepad support to start sequence
+addGamepadControls();
+
   const leftBtn = document.getElementById('left-btn');
   const rightBtn = document.getElementById('right-btn');
   const rotateBtn = document.getElementById('rotate-btn');
@@ -369,6 +484,173 @@ function triggerTetrisEffect() {
   container.classList.add('tetris-flash');
   setTimeout(() => container.classList.remove('tetris-flash'), 500);
 }
+
+function drawCRTOverlay(ctx) {
+  const { width, height } = ctx.canvas;
+  ctx.save();
+  ctx.globalAlpha = 0.05;
+  ctx.fillStyle = '#0f0';
+  for (let y = 0; y < height; y += 2) {
+    ctx.fillRect(0, y, width, 1);
+  }
+  ctx.restore();
+}
+
+function drawVHSTracking(ctx) {
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+  const offset = Math.random() * 4 - 2;
+  ctx.save();
+  ctx.globalAlpha = 0.03;
+  ctx.translate(offset, 0);
+  ctx.fillStyle = '#0ff';
+  for (let y = 0; y < h; y += 8) {
+    ctx.fillRect(0, y + Math.sin(y * 0.1 + Date.now() / 100) * 2, w, 1);
+  }
+  ctx.restore();
+}
+
+function screenShake(intensity = 4, duration = 200) {
+  const canvas = document.getElementById('tetris');
+  const originalTransform = canvas.style.transform;
+  let start = performance.now();
+
+  function shake() {
+    const elapsed = performance.now() - start;
+    if (elapsed < duration) {
+      const dx = (Math.random() - 0.5) * intensity;
+      const dy = (Math.random() - 0.5) * intensity;
+      canvas.style.transform = `translate(${dx}px, ${dy}px)`;
+      requestAnimationFrame(shake);
+    } else {
+      canvas.style.transform = originalTransform;
+    }
+  }
+  shake();
+}
+
+function pulseScore() {
+  if (!scoreDisplay) return;
+  scoreDisplay.classList.add('pulse');
+  setTimeout(() => scoreDisplay.classList.remove('pulse'), 300);
+}
+
+function showInsertCoinPrompt(duration = 3000) {
+  const insertCoin = document.getElementById('insert-coin');
+  if (insertCoin) {
+    insertCoin.style.display = 'block';
+    setTimeout(() => {
+      insertCoin.style.display = 'none';
+    }, duration);
+  }
+}
+
+function fakeBootSequence(callback) {
+  const boot = document.createElement('div');
+  boot.id = 'bios-boot';
+  boot.style.position = 'absolute';
+  boot.style.top = '0';
+  boot.style.left = '0';
+  boot.style.width = '100%';
+  boot.style.height = '100%';
+  boot.style.background = '#000';
+  boot.style.color = '#0f0';
+  boot.style.fontFamily = 'Courier New, monospace';
+  boot.style.padding = '20px';
+  boot.style.zIndex = '9999';
+
+  const bootText = document.createElement('pre');
+  bootText.id = 'boot-text';
+  bootText.textContent = 'Booting TEPRIS Engine...';
+  boot.appendChild(bootText);
+  document.body.appendChild(boot);
+
+  const lines = [
+    'Loading assets...',
+    'Detecting input hardware...',
+    'Mounting ROM...',
+    'Verifying shaders...',
+    'Calibrating CRT barrel distortion...',
+    '>> READY <<'
+  ];
+
+  let i = 0;
+  const interval = setInterval(() => {
+    if (i < lines.length) {
+      bootText.textContent += '\n' + lines[i++];
+    } else {
+      clearInterval(interval);
+      setTimeout(() => {
+        boot.remove();
+        showInsertCoinPrompt();
+        callback?.();
+      }, 1000);
+    }
+  }, 400);
+}
+
+// Inject into update loop
+const originalUpdate = update;
+update = function(time = 0) {
+  if (paused) return;
+  const deltaTime = time - lastTime;
+  lastTime = time;
+  dropCounter += deltaTime;
+  if (dropCounter > dropInterval) drop();
+  draw();
+  drawVHSTracking(context);
+  drawCRTOverlay(context);
+  if (running) requestAnimationFrame(update);
+};
+
+// Inject into sweep logic
+const originalSweep = sweep;
+sweep = function() {
+  flashingCells = [];
+  let rowsToClear = [];
+  for (let y = rows - 1; y >= 0; y--) {
+    if (arena[y].every(val => val !== 0)) rowsToClear.push(y);
+  }
+  if (rowsToClear.length > 0) {
+    rowsToClear.forEach(y => {
+      for (let x = 0; x < cols; x++) {
+        flashingCells.push({ x, y });
+      }
+    });
+    flashStartTime = performance.now();
+    if (rowsToClear.length === 4) {
+      playSafe(tetrisSound);
+      screenShake();
+      triggerTetrisEffect();
+    } else {
+      playSafe(pointsSound);
+    }
+    pulseScore();
+    setTimeout(() => {
+      rowsToClear.sort((a, b) => a - b).forEach(y => {
+        arena.splice(y, 1);
+        arena.unshift(Array(cols).fill(0));
+      });
+      linesCleared += rowsToClear.length;
+      score += rowsToClear.length === 4 ? 1200 : rowsToClear.length * 100;
+      level = Math.floor(linesCleared / 10);
+      dropInterval = Math.max(100, 1000 - level * 100);
+      updateScore();
+    }, flashDuration);
+  }
+};
+
+// Use BIOS boot before game starts
+const originalDOMContentLoaded = document.onreadystatechange;
+document.addEventListener('DOMContentLoaded', () => {
+  fakeBootSequence(() => {
+    window.startTetris = () => {
+      const btn = document.getElementById('tetris-toggle');
+      if (btn) btn.click();
+    };
+    // Continue original init logic here (already in code)
+  });
+});
 
 function resizeCanvas() {
   const container = document.getElementById('tetris-container') || document.body;

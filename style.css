@@ -254,3 +254,89 @@ html, body {
   }
 } 
 
+// === Add this to your CSS ===
+/* Retro Tetris Style */
+body {
+  background: radial-gradient(circle at center, #111 0%, #000 100%);
+  font-family: 'Press Start 2P', monospace;
+  color: #0f0;
+  text-shadow: 0 0 3px #0f0;
+}
+
+canvas {
+  image-rendering: pixelated;
+  box-shadow: 0 0 10px #0f0, 0 0 40px #0ff;
+  border: 4px double #0ff;
+  background-color: #000;
+}
+
+#tetris-container {
+  border: 4px ridge #0ff;
+  padding: 8px;
+  background: repeating-linear-gradient(
+    0deg,
+    #000,
+    #000 2px,
+    #111 2px,
+    #111 4px
+  );
+  box-shadow: 0 0 20px #0ff inset;
+}
+
+#score, #level, #lines, #highScore {
+  font-size: 12px;
+  color: #0f0;
+  text-shadow: 0 0 2px #0f0;
+}
+
+.tetris-flash {
+  animation: screenFlash 0.2s ease-in-out alternate 2;
+}
+
+@keyframes screenFlash {
+  from { background-color: #fff; }
+  to { background-color: #000; }
+}
+
+// === Add to JS where needed ===
+function drawCRTOverlay(ctx) {
+  const { width, height } = ctx.canvas;
+  ctx.save();
+  ctx.globalAlpha = 0.05;
+  ctx.fillStyle = '#0f0';
+  for (let y = 0; y < height; y += 2) {
+    ctx.fillRect(0, y, width, 1);
+  }
+  ctx.restore();
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+#insert-coin {
+  animation: blink 1s infinite;
+}
+
+// Inside your draw() function, after everything else is drawn:
+drawCRTOverlay(context);
+
+// Load retro font (include in HTML):
+// <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+// Optional: add CRT audio static at game start for effect
+function playCRTStartupNoise() {
+  const osc = new AudioContext();
+  const n = osc.createBuffer(1, 44100, 44100);
+  const d = n.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.1;
+  const src = osc.createBufferSource();
+  src.buffer = n;
+  src.connect(osc.destination);
+  src.start();
+  setTimeout(() => osc.close(), 500);
+}
+
+// Call playCRTStartupNoise() during DOMContentLoaded or tetris-toggle click
+// to give it that "TV turned on" sizzle
