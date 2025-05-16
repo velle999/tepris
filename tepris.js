@@ -3,6 +3,25 @@
 // This is the clean and fully edited version of your Tepris game logic.
 // It removes duplicate functions, repairs control logic, stabilizes gameplay loop, and includes full mobile touch/vibration support.
 
+const bgTracks = ['background.mp3', 'bg-2.mp3', 'bg-3.mp3'];
+let currentTrackIndex = Math.floor(Math.random() * bgTracks.length);
+const bgAudio = document.getElementById('bg-music');
+bgAudio.src = bgTracks[currentTrackIndex];
+bgAudio.loop = false;
+bgAudio.volume = 0.5;
+
+function playNextTrack() {
+  currentTrackIndex = (currentTrackIndex + 1) % bgTracks.length;
+  bgAudio.src = bgTracks[currentTrackIndex];
+  bgAudio.play().catch(err => console.warn("🎵 Audio play error:", err));
+}
+
+bgAudio.addEventListener('ended', playNextTrack);
+
+function startBackgroundMusic() {
+  bgAudio.play().catch(err => console.warn("🎵 Failed to start music:", err));
+}
+
 // Entry point on DOM load
 
 function addTouchControls() {
