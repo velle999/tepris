@@ -795,3 +795,6 @@ document.addEventListener('DOMContentLoaded', () => {
     requestAnimationFrame(update);
   });
 });
+
+
+console.warn('⚠️ startTetris is missing!');

@@ -140,7 +140,7 @@
   <!-- Audio -->
   <audio id="coin-sound" src="coin.wav" preload="auto"></audio>
   <audio id="rotate-sound" src="boop.mp3" preload="auto"></audio>
-  <audio id="bg-music" src="background.mp3" preload="auto" loop></audio>
+  <audio id="bg-music" src="assets\background.mp3" preload="auto" loop></audio>
   <audio id="points-sound" src="points.mp3" preload="auto"></audio>
   <audio id="tetris-sound" src="tepris!.mp3" preload="auto"></audio>
 
@@ -254,8 +254,8 @@
         wrapper.style.display = 'flex';
 
         // Start game
-        if (typeof startTetris === 'function') {
-          startTetris();
+        if (typeof startTetris === 'function' || typeof window.startTetris === 'function') {
+          (startTetris || window.startTetris)();
         } else {
           console.warn('❌ startTetris is not defined.');
         }
