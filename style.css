@@ -1,22 +1,18 @@
-/* Updated CSS for fully responsive and mobile-friendly Tepris layout */
-
 /* === Global Defaults === */
 html, body {
   margin: 0;
   padding: 0;
-  height: 100%;
-  width: 100%;
+  height: 100vh;
+  width: 100vw;
+  min-height: 100vh;
+  min-width: 100vw;
   background: linear-gradient(135deg, #1a1a1a, #000000);
   font-family: 'Courier New', monospace;
   color: #eee;
   overflow: hidden;
   touch-action: none;
   overscroll-behavior: none;
-  position: fixed;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  /* REMOVE position: fixed & display:flex here! Let the wrapper do layout. */
 }
 
 /* === Arcade Shell === */
@@ -25,9 +21,10 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  width: 100%;
+  min-height: 100vh;
+  width: 100vw;
   position: relative;
+  overflow: hidden;
 }
 
 /* === Insert Coin Button === */
@@ -62,9 +59,11 @@ html, body {
   align-items: center;
   justify-content: flex-start;
   background: #111;
-  width: 100%;
-  height: 100%;
-  padding: 10px;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  min-width: 100vw;
+  padding: 0;
   box-sizing: border-box;
   overflow: hidden;
 }
@@ -76,7 +75,8 @@ html, body {
   flex-wrap: wrap;
   justify-content: center;
   align-items: flex-start;
-  width: 100%;
+  width: 100vw;
+  max-width: 100vw;
   flex: 1;
   max-height: 100vh;
   overflow: hidden;
@@ -88,26 +88,35 @@ html, body {
 #tetris-container {
   width: 100%;
   max-width: 90vw;
-  max-height: 100vh;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
   box-sizing: border-box;
   padding: 0;
+  border: 4px ridge #0ff;
+  background: repeating-linear-gradient(0deg, #000, #000 2px, #111 2px, #111 4px);
+  box-shadow: 0 0 20px #0ff inset;
+  margin: 0 auto;
 }
 
+/* ======= CRITICAL: Fixes for canvas stretching/auto-sizing issues ======= */
 #tetris {
+  display: block;
+  margin: 0 auto;
   width: 100%;
   height: auto;
   aspect-ratio: 10 / 20;
   max-height: 65vh;
   max-width: 100%;
   background: rgba(0, 0, 0, 0.85);
-  border: 2px solid #0ff;
+  border: 4px double #0ff;
   image-rendering: pixelated;
-  display: block;
-  margin: 0 auto;
+  box-shadow: 0 0 10px #0f0, 0 0 40px #0ff;
+  /* Prevent resizing bugs on load/OS window resize */
+  min-width: 200px;
+  min-height: 400px;
 }
 
 /* === Preview Box === */
@@ -138,6 +147,11 @@ html, body {
   max-width: 300px;
 }
 
+#score, #level, #lines, #highScore {
+  font-size: 12px;
+  color: #0f0;
+  text-shadow: 0 0 2px #0f0;
+}
 
 /* === Touch Controls === */
 #touch-controls {
@@ -164,28 +178,6 @@ html, body {
 #touch-controls button:hover {
   background: #00ffff;
   color: #000;
-}
-
-/* === High Scores === */
-#highscores {
-  margin-top: 10px;
-  max-width: 400px;
-  width: 100%;
-}
-
-#highscore-table {
-  margin-top: 6px;
-  color: #0ff;
-  background: #000;
-  border-collapse: collapse;
-  width: 100%;
-}
-
-#highscore-table td,
-#highscore-table th {
-  padding: 4px 8px;
-  border: 1px solid #0ff;
-  text-align: center;
 }
 
 /* === Overlay === */
@@ -221,18 +213,34 @@ html, body {
 }
 
 .tetris-flash {
-  animation: flashPulse 0.5s ease-in-out;
+  animation: screenFlash 0.2s ease-in-out alternate 2;
+}
+
+@keyframes screenFlash {
+  from { background-color: #fff; }
+  to { background-color: #000; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+#insert-coin {
+  animation: blink 1s infinite;
 }
 
 /* === Responsive Tweaks === */
 @media (max-width: 600px) {
   #tetris-container {
-    max-width: 95vw;
-    max-height: 100vh;
+    max-width: 98vw;
+    max-height: 99vh;
   }
 
   #tetris {
     max-height: 60vh;
+    min-width: 120px;
+    min-height: 200px;
   }
 
   #preview-box {
@@ -252,99 +260,16 @@ html, body {
   #game-area {
     gap: 8px;
   }
-} 
-
-// === Add this to your CSS ===
-/* Retro Tetris Style */
-body {
-  background: radial-gradient(circle at center, #111 0%, #000 100%);
-  font-family: 'Press Start 2P', monospace;
-  color: #0f0;
-  text-shadow: 0 0 3px #0f0;
 }
 
-canvas {
-  image-rendering: pixelated;
-  box-shadow: 0 0 10px #0f0, 0 0 40px #0ff;
-  border: 4px double #0ff;
-  background-color: #000;
-}
-
-#tetris-container {
-  border: 4px ridge #0ff;
-  padding: 8px;
-  background: repeating-linear-gradient(
-    0deg,
-    #000,
-    #000 2px,
-    #111 2px,
-    #111 4px
-  );
-  box-shadow: 0 0 20px #0ff inset;
-}
-
-#score, #level, #lines, #highScore {
-  font-size: 12px;
-  color: #0f0;
-  text-shadow: 0 0 2px #0f0;
-}
-
-.tetris-flash {
-  animation: screenFlash 0.2s ease-in-out alternate 2;
-}
-
-@keyframes screenFlash {
-  from { background-color: #fff; }
-  to { background-color: #000; }
-}
-
-// === Add to JS where needed ===
-function drawCRTOverlay(ctx) {
-  const { width, height } = ctx.canvas;
-  ctx.save();
-  ctx.globalAlpha = 0.05;
-  ctx.fillStyle = '#0f0';
-  for (let y = 0; y < height; y += 2) {
-    ctx.fillRect(0, y, width, 1);
-  }
-  ctx.restore();
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-#insert-coin {
-  animation: blink 1s infinite;
-}
-
-// Inside your draw() function, after everything else is drawn:
-drawCRTOverlay(context);
-
-// Load retro font (include in HTML):
-// <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-
-// Optional: add CRT audio static at game start for effect
-function playCRTStartupNoise() {
-  const osc = new AudioContext();
-  const n = osc.createBuffer(1, 44100, 44100);
-  const d = n.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.1;
-  const src = osc.createBufferSource();
-  src.buffer = n;
-  src.connect(osc.destination);
-  src.start();
-  setTimeout(() => osc.close(), 500);
-}
-
+/* === Background Screensaver === */
 #tepris-background {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: -9999; /* behind everything */
+  z-index: -9999;
   background: linear-gradient(270deg, #0f0c29, #302b63, #24243e);
   background-size: 800% 800%;
   animation: bgScreensaver 30s ease infinite;
@@ -358,6 +283,78 @@ function playCRTStartupNoise() {
   100% { background-position: 0% 50%; }
 }
 
+/* === Pause Menu Overlay === */
+#pause-menu {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #000c;
+  color: #0f0;
+  padding: 24px 28px 20px 28px;
+  border: 2.5px solid #0ff;
+  border-radius: 14px;
+  font-family: 'Press Start 2P', monospace;
+  z-index: 10000;
+  min-width: 320px;
+  box-shadow: 0 0 20px #0ff3, 0 2px 18px #001;
+}
 
-// Call playCRTStartupNoise() during DOMContentLoaded or tetris-toggle click
-// to give it that "TV turned on" sizzle
+#pause-menu button {
+  display: block;
+  width: 100%;
+  margin: 12px 0;
+  padding: 12px 0;
+  font-size: 1.08rem;
+  background: #00161b;
+  color: #0ff;
+  border: 2px solid #0ff7;
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  box-shadow: 0 0 7px #0ff3 inset;
+}
+#pause-menu button:hover,
+#pause-menu button.selected,
+#pause-menu button:focus {
+  background: #0ff;
+  color: #00161b;
+  box-shadow: 0 0 16px #0ff, 0 0 2px #0ff inset;
+  border-color: #fff;
+  outline: 2px solid #fff;
+}
+
+#pause-menu #controls-layout {
+  margin-top: 20px;
+  background: rgba(20,32,32,0.96);
+  padding: 14px 18px 12px 18px;
+  border-radius: 10px;
+  border: 1.8px solid #0ff4;
+  color: #fff;
+  font-size: 1rem;
+  text-align: left;
+  box-shadow: 0 0 12px #0ff2;
+}
+
+#pause-menu .controls-title {
+  text-align: center;
+  font-weight: bold;
+  color: #0ff;
+  margin-bottom: 10px;
+  font-size: 1.22rem;
+  letter-spacing: 0.13em;
+}
+#pause-menu .controls-row {
+  margin-bottom: 5px;
+  font-size: 1.02em;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+}
+#pause-menu hr {
+  border: none;
+  border-top: 2px solid #088;
+  margin: 12px 0 15px 0;
+}

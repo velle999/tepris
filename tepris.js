@@ -1,286 +1,76 @@
-// ===== TEPRIS.JS - FULLY RESPONSIVE & ENHANCED WITH MOBILE AUDIO + LEVEL SPEED + INITIALS ENTRY + SCOREBOARD =====
-
-// This is the clean and fully edited version of your Tepris game logic.
-// It removes duplicate functions, repairs control logic, stabilizes gameplay loop, and includes full mobile touch/vibration support.
-
-const bgTracks = ['background.mp3', 'bg-2.mp3', 'bg-3.mp3'];
-let currentTrackIndex = Math.floor(Math.random() * bgTracks.length);
-const bgAudio = document.getElementById('bg-music');
-bgAudio.src = bgTracks[currentTrackIndex];
-bgAudio.loop = false;
-bgAudio.volume = 0.5;
-
-function playNextTrack() {
-  currentTrackIndex = (currentTrackIndex + 1) % bgTracks.length;
-  bgAudio.src = bgTracks[currentTrackIndex];
-  bgAudio.play().catch(err => console.warn("🎵 Audio play error:", err));
-}
-
-bgAudio.addEventListener('ended', playNextTrack);
-
-function startBackgroundMusic() {
-  bgAudio.play().catch(err => console.warn("🎵 Failed to start music:", err));
-}
-
-// Entry point on DOM load
-
-function addTouchControls() {
-  console.log("✅ Touch controls initialized");
-
-  let startX = 0, startY = 0, moved = false, longPressTimer = null;
-  const threshold = 30, doubleTapGap = 300;
-  let lastTap = 0;
-
-  window.addEventListener('touchstart', e => {
-    if (!e.touches || e.touches.length > 2) return;
-    const t = e.touches[0];
-    startX = t.clientX;
-    startY = t.clientY;
-    moved = false;
-    longPressTimer = setTimeout(() => {
-      navigator.vibrate?.(100);
-      hardDrop();
-    }, 400);
-  });
-
-  window.addEventListener('touchmove', e => {
-    if (!e.touches || e.touches.length > 2) return;
-    clearTimeout(longPressTimer);
-    const t = e.touches[0];
-    const dx = t.clientX - startX;
-    const dy = t.clientY - startY;
-
-    if (Math.abs(dx) > Math.abs(dy)) {
-      if (Math.abs(dx) > threshold) {
-        moved = true;
-        navigator.vibrate?.(25);
-        if (dx > 0) {
-          pos.x++;
-          if (collide(arena, { matrix: current, pos })) pos.x--;
-        } else {
-          pos.x--;
-          if (collide(arena, { matrix: current, pos })) pos.x++;
-        }
-        startX = t.clientX;
-      }
-    } else if (Math.abs(dy) > threshold && dy > 0) {
-      moved = true;
-      navigator.vibrate?.(15);
-      drop();
-      startY = t.clientY;
-    }
-  });
-
-  window.addEventListener('touchend', e => {
-    clearTimeout(longPressTimer);
-    if (e.changedTouches.length === 2) {
-      navigator.vibrate?.([30, 30, 30]);
-      hardDrop();
-      return;
-    }
-    if (moved) return;
-    const now = Date.now();
-    if (now - lastTap < doubleTapGap) {
-      paused = !paused;
-      if (paused) {
-        bgMusic.pause();
-        console.log('⏸️ Paused by double-tap');
-      } else {
-        bgMusic.play().catch(err => console.warn("🔇 Music resume failed:", err));
-        requestAnimationFrame(update);
-        console.log('▶️ Resumed by double-tap');
-      }
-      lastTap = 0;
-    } else {
-      navigator.vibrate?.(10);
-      rotatePiece(1);
-      lastTap = now;
-    }
-  });
-
-// Add Xbox Controller Support with proper DAS + ARR for D-Pad (fixed and simplified to match analog behavior)
-let lastInputTime = 0;
-let lastButtonStates = [];
-
-const dpadState = {
-  left: false,
-  right: false,
-  down: false
-};
-
-const cooldown = 150;
-
-function addGamepadControls() {
-  window.addEventListener("gamepadconnected", (e) => {
-    console.log("🎮 Gamepad connected:", e.gamepad);
-    pollGamepad();
-  });
-}
-
-function pollGamepad() {
-  const gamepads = navigator.getGamepads?.() || [];
-  const gp = gamepads[0];
-  if (!gp) return requestAnimationFrame(pollGamepad);
-
-  const now = performance.now();
-  const threshold = 0.5;
-  const [lx, ly] = [gp.axes[0], gp.axes[1]];
-
-  const dpadLeft = gp.buttons[14]?.pressed;
-  const dpadRight = gp.buttons[15]?.pressed;
-  const dpadDown = gp.buttons[13]?.pressed;
-
-  if (!paused && running) {
-    // Analog stick movement
-    if (lx < -threshold && now - lastInputTime > cooldown) {
-      pos.x--;
-      if (collide(arena, { matrix: current, pos })) pos.x++;
-      lastInputTime = now;
-    } else if (lx > threshold && now - lastInputTime > cooldown) {
-      pos.x++;
-      if (collide(arena, { matrix: current, pos })) pos.x--;
-      lastInputTime = now;
-    }
-
-    // D-pad movement using same cooldown as stick
-    if (dpadLeft && !dpadState.left && now - lastInputTime > cooldown) {
-      pos.x--;
-      if (collide(arena, { matrix: current, pos })) pos.x++;
-      lastInputTime = now;
-    }
-    if (dpadRight && !dpadState.right && now - lastInputTime > cooldown) {
-      pos.x++;
-      if (collide(arena, { matrix: current, pos })) pos.x--;
-      lastInputTime = now;
-    }
-    if (dpadDown && !dpadState.down && now - lastInputTime > cooldown) {
-      drop();
-      lastInputTime = now;
-    }
-  }
-
-  // Track previous D-pad states
-  dpadState.left = dpadLeft;
-  dpadState.right = dpadRight;
-  dpadState.down = dpadDown;
-
-  if (running || !paused) {
-    gp.buttons.forEach((btn, index) => {
-      const wasPressed = lastButtonStates[index];
-      const justPressed = btn.pressed && !wasPressed;
-
-      if (justPressed) {
-        switch (index) {
-          case 0: rotatePiece(1); break;
-          case 1: hardDrop(); break;
-          case 2:
-            if (!canHold) return;
-            if (!hold) {
-              hold = current;
-              current = next;
-              next = randomPiece();
-            } else {
-              [current, hold] = [hold, current];
-            }
-            pos = { x: ((cols / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
-            canHold = false;
-            break;
-          case 8:
-            playSafe(startSound);
-            console.log("🪙 Insert Coin button pressed");
-            break;
-          case 9:
-            paused = !paused;
-            if (paused) {
-              bgMusic.pause();
-              console.log("⏸️ Game paused via Start button");
-            } else {
-              bgMusic.play().catch(err => console.warn("🔇 Music resume failed:", err));
-              requestAnimationFrame(update);
-              console.log("▶️ Game resumed via Start button");
-            }
-            break;
-        }
-      }
-    });
-
-    lastButtonStates = gp.buttons.map(b => b.pressed);
-  }
-
-  requestAnimationFrame(pollGamepad);
-}
-
-// Add gamepad support to start sequence
-addGamepadControls();
-
-  const leftBtn = document.getElementById('left-btn');
-  const rightBtn = document.getElementById('right-btn');
-  const rotateBtn = document.getElementById('rotate-btn');
-  const downBtn = document.getElementById('down-btn');
-  const hardDropBtn = document.getElementById('harddrop-btn');
-  const holdBtn = document.getElementById('hold-btn');
-
-  if (leftBtn) leftBtn.addEventListener('click', () => {
-    if (paused || !running) return;
-    pos.x--;
-    if (collide(arena, { matrix: current, pos })) pos.x++;
-  });
-
-  if (rightBtn) rightBtn.addEventListener('click', () => {
-    if (paused || !running) return;
-    pos.x++;
-    if (collide(arena, { matrix: current, pos })) pos.x--;
-  });
-
-  if (rotateBtn) rotateBtn.addEventListener('click', () => {
-    if (paused || !running) return;
-    rotatePiece(1);
-  });
-
-  if (downBtn) downBtn.addEventListener('click', () => {
-    if (paused || !running) return;
-    drop();
-  });
-
-  if (hardDropBtn) hardDropBtn.addEventListener('click', () => {
-    if (paused || !running) return;
-    navigator.vibrate?.([20, 40]);
-    hardDrop();
-  });
-
-  if (holdBtn) holdBtn.addEventListener('click', () => {
-    paused = !paused;
-    if (paused) {
-      bgMusic.pause();
-      console.log('⏸️ Game paused via hold button');
-    } else {
-      if (!running) {
-        running = true;
-        console.log('▶️ Starting game loop from hold button');
-      }
-      bgMusic.play().catch(err => console.warn("🔇 Music resume failed:", err));
-      requestAnimationFrame(update);
-      console.log('▶️ Game resumed via hold button');
-    }
-  });
-}
-
-let canvas, context, previewBox, previewCtx;
-let scoreDisplay, highScoreDisplay, levelDisplay, linesDisplay;
-let startSound, rotateSound, bgMusic, pointsSound, tetrisSound;
-
-let rows = 20, cols = 10, blockSize = 20;
-let hold = null, canHold = true;
-let arena, current, next, pos, running = false, paused = false;
-let dropCounter = 0, dropInterval = 1000, lastTime = 0;
-let score = 0, highScore = 0, highScoreInitials = '---';
-let level = 0, linesCleared = 0;
+// ============================================================================
+//    TEPRIS ENGINE - RGB SLIDE + BG - With Game Over, Restart, Menu Control
+// ============================================================================
+const COLS = 10, ROWS = 20;
+let blockSize = 24;
+let arena, current, next, hold, canHold, pos;
+let score = 0, highScore = 0, highScoreInitials = "---", level = 0, linesCleared = 0;
+let running = false, paused = false, overlayMenuActive = false;
 let flashingCells = [], flashStartTime = 0, flashDuration = 400;
+let dropInterval = 1000, dropCounter = 0, lastTime = 0;
+let canvas, ctx, previewBox, previewCtx, scoreDisplay, highScoreDisplay, levelDisplay, linesDisplay;
+let bgMusic, coinSound, rotateSound, pointsSound, tetrisSound, startSound;
+let lastButtonStates = Array(17).fill(false);
 
-function createMatrix(w, h) {
-  return Array.from({ length: h }, () => Array(w).fill(0));
+// === BACKGROUND MUSIC TRACKS ===
+const bgTracks = [
+  'assets/background.mp3',
+  'assets/bg-2.mp3',
+  'assets/bg-3.mp3'
+];
+let currentTrackIndex = Math.floor(Math.random() * bgTracks.length);
+
+// Menu overlays
+let overlayMenuItems = [], overlayMenuIndex = 0;
+const PAUSE_MENU_ITEMS = ['resume-btn', 'mute-btn', 'input-toggle-btn'];
+
+// CRT/VHS
+const CRT_EFFECT = true, VHS_EFFECT = true;
+
+// ============ REPEAT MOVEMENT (SLIDING) ==============
+let dpadHold = { left: false, right: false, down: false };
+let stickHold = { left: false, right: false, down: false };
+let dpadTimers = { left: null, right: null, down: null };
+let stickTimers = { left: null, right: null, down: null };
+const INITIAL_DELAY = 220, REPEAT_RATE = 40;
+
+function movePiece(dir) {
+  if (!running || paused || overlayMenuActive) return;
+  if (dir === "left")  { pos.x--; if (collide(arena, { matrix: current, pos })) pos.x++; }
+  if (dir === "right") { pos.x++; if (collide(arena, { matrix: current, pos })) pos.x--; }
+  if (dir === "down")  drop();
 }
 
+function startRepeat(dir, isDpad) {
+  if (overlayMenuActive) return;
+  if (isDpad) {
+    dpadHold[dir] = true;
+    if (dpadTimers[dir]) clearTimeout(dpadTimers[dir]);
+    movePiece(dir);
+    dpadTimers[dir] = setTimeout(function repeat() {
+      if (dpadHold[dir]) {
+        movePiece(dir);
+        dpadTimers[dir] = setTimeout(repeat, REPEAT_RATE);
+      }
+    }, INITIAL_DELAY);
+  } else {
+    stickHold[dir] = true;
+    if (stickTimers[dir]) clearTimeout(stickTimers[dir]);
+    movePiece(dir);
+    stickTimers[dir] = setTimeout(function repeat() {
+      if (stickHold[dir]) {
+        movePiece(dir);
+        stickTimers[dir] = setTimeout(repeat, REPEAT_RATE);
+      }
+    }, INITIAL_DELAY);
+  }
+}
+function stopRepeat(dir, isDpad) {
+  if (isDpad) { dpadHold[dir] = false; if (dpadTimers[dir]) clearTimeout(dpadTimers[dir]); }
+  else { stickHold[dir] = false; if (stickTimers[dir]) clearTimeout(stickTimers[dir]); }
+}
+
+// ==================== PIECES & MATRIX =======================================
 const pieces = {
   I: [[1, 1, 1, 1]],
   J: [[1, 0, 0], [1, 1, 1]],
@@ -290,48 +80,110 @@ const pieces = {
   T: [[0, 1, 0], [1, 1, 1]],
   Z: [[1, 1, 0], [0, 1, 1]]
 };
+function createMatrix(w, h) { return Array.from({ length: h }, () => Array(w).fill(0)); }
+function createPiece(type) { return pieces[type].map(r => [...r]); }
+function randomPiece() { const keys = Object.keys(pieces); return createPiece(keys[Math.floor(Math.random() * keys.length)]); }
 
-function createPiece(type) {
-  return pieces[type].map(row => [...row]);
+// ==================== AUDIO UTILS ===========================================
+function playSafe(audio) {
+  if (!audio || typeof audio.play !== 'function') return;
+  try { audio.pause(); audio.currentTime = 0; audio.play().catch(()=>{}); } catch {}
 }
 
-function playSafe(sound) {
-  if (!sound || typeof sound.play !== 'function') return;
-  try {
-    sound.pause();
-    sound.currentTime = 0;
-    sound.play().catch(err => console.warn(`🔇 Sound failed:`, err));
-  } catch (e) {
-    console.warn('🔇 Sound error:', e);
+// ==================== STORAGE UTILS =========================================
+function saveHighScore() {
+  localStorage.setItem('teprisHighScore', score);
+  localStorage.setItem('teprisHighScoreInitials', highScoreInitials);
+}
+function loadHighScore() {
+  highScore = parseInt(localStorage.getItem('teprisHighScore')) || 0;
+  highScoreInitials = localStorage.getItem('teprisHighScoreInitials') || "---";
+}
+
+// ==================== RGB MODE ===========================================
+let rgbMode = false;
+function getRGBColor(t) {
+  const r = Math.floor(128 + 128 * Math.sin(t/600));
+  const g = Math.floor(128 + 128 * Math.sin(t/600 + 2));
+  const b = Math.floor(128 + 128 * Math.sin(t/600 + 4));
+  return `rgb(${r},${g},${b})`;
+}
+function setRGBBackground(enable) {
+  const el = document.getElementById('tepris-background') || document.body;
+  if (enable) {
+    el.style.animation = "bgScreensaver 2s linear infinite";
+    el.style.background = "linear-gradient(270deg, #f00, #0f0, #00f, #ff0, #0ff, #f0f, #fff)";
+    el.style.backgroundSize = "1200% 1200%";
+  } else {
+    el.style.animation = "";
+    el.style.background = "";
+    el.style.backgroundSize = "";
   }
 }
 
-function rotateMatrix(matrix, dir) {
-  const rows = matrix.length;
-  const cols = matrix[0].length;
-  const rotated = Array.from({ length: cols }, () => Array(rows).fill(0));
-  for (let y = 0; y < rows; y++)
-    for (let x = 0; x < cols; x++)
-      rotated[dir > 0 ? x : cols - 1 - x][dir > 0 ? rows - 1 - y : y] = matrix[y][x];
-  return rotated;
-}
-
-function rotatePiece(dir) {
-  const rotated = rotateMatrix(current, dir);
-  const oldX = pos.x;
-  let offset = 1;
-  while (collide(arena, { matrix: rotated, pos })) {
-    pos.x += offset;
-    offset = -(offset + (offset > 0 ? 1 : -1));
-    if (offset > rotated[0].length) {
-      pos.x = oldX;
-      return;
+// ==================== RENDERING =============================================
+function drawMatrix(matrix, offset, _ctx = ctx, size = blockSize, color = "#0ff", opacity = 1) {
+  _ctx.save();
+  _ctx.globalAlpha = opacity;
+  const t = performance.now();
+  matrix.forEach((row, y) => row.forEach((val, x) => {
+    if (val) {
+      const gx = x + offset.x, gy = y + offset.y, now = t + gx*77 + gy*99;
+      let fillC = rgbMode ? getRGBColor(now) : color;
+      if (flashingCells.some(c=>c.x===gx&&c.y===gy&&now-flashStartTime<flashDuration)) fillC = "#fff";
+      _ctx.fillStyle = fillC;
+      _ctx.fillRect(gx*size, gy*size, size, size);
+      _ctx.strokeStyle = "#000";
+      _ctx.strokeRect(gx*size, gy*size, size, size);
     }
+  }));
+  _ctx.restore();
+}
+function drawGhostPiece() {
+  if (!current) return;
+  let ghostY = pos.y;
+  while (!collide(arena, { matrix: current, pos: { x: pos.x, y: ghostY + 1 } })) ghostY++;
+  drawMatrix(current, { x: pos.x, y: ghostY }, ctx, blockSize, rgbMode ? getRGBColor(performance.now()+888) : "#888", 0.3);
+}
+function drawCRTOverlay(_ctx) {
+  if (!CRT_EFFECT) return;
+  const { width, height } = _ctx.canvas;
+  _ctx.save(); _ctx.globalAlpha = 0.05; _ctx.fillStyle = "#0f0";
+  for (let y=0; y<height; y+=2) _ctx.fillRect(0, y, width, 1);
+  _ctx.restore();
+}
+function drawVHSTracking(_ctx) {
+  if (!VHS_EFFECT) return;
+  const w=_ctx.canvas.width, h=_ctx.canvas.height, offset=Math.random()*4-2;
+  _ctx.save(); _ctx.globalAlpha=0.03; _ctx.translate(offset,0); _ctx.fillStyle="#0ff";
+  for (let y=0; y<h; y+=8) _ctx.fillRect(0, y+Math.sin(y*0.1+Date.now()/100)*2, w, 1);
+  _ctx.restore();
+}
+function draw() {
+  ctx.fillStyle = rgbMode ? getRGBColor(performance.now()) : "#111";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawMatrix(arena, { x: 0, y: 0 });
+  drawGhostPiece();
+  if (current && pos) drawMatrix(current, pos);
+  if (previewBox && next) {
+    previewCtx.clearRect(0,0,previewBox.width,previewBox.height);
+    const scale = Math.floor(previewBox.width/4);
+    drawMatrix(next, { x: 1, y: 1 }, previewCtx, scale, rgbMode ? getRGBColor(performance.now()+333) : "#0f0", 0.8);
   }
-  current = rotated;
-  playSafe(rotateSound);
+  drawVHSTracking(ctx);
+  drawCRTOverlay(ctx);
 }
 
+// ==================== GAME LOGIC ============================================
+function shuffleNextTrack() {
+  let nextIndex;
+  do { nextIndex = Math.floor(Math.random() * bgTracks.length); } while (nextIndex === currentTrackIndex);
+  currentTrackIndex = nextIndex;
+  if (bgMusic) {
+    bgMusic.src = bgTracks[currentTrackIndex];
+    bgMusic.play().catch(err => console.warn("🎵 Audio play error:", err));
+  }
+}
 function collide(arena, player) {
   const [m, o] = [player.matrix, player.pos];
   for (let y = 0; y < m.length; ++y)
@@ -340,35 +192,52 @@ function collide(arena, player) {
         return true;
   return false;
 }
-
 function merge(arena, player) {
-  player.matrix.forEach((row, y) => {
-    row.forEach((val, x) => {
-      if (val) arena[y + player.pos.y][x + player.pos.x] = 1;
-    });
-  });
+  player.matrix.forEach((row, y) => row.forEach((val, x) => {
+    if (val) arena[y + player.pos.y][x + player.pos.x] = 1;
+  }));
 }
-
+function rotateMatrix(matrix, dir) {
+  const rows = matrix.length, cols = matrix[0].length;
+  const rotated = Array.from({ length: cols }, () => Array(rows).fill(0));
+  for (let y = 0; y < rows; y++)
+    for (let x = 0; x < cols; x++)
+      rotated[dir > 0 ? x : cols - 1 - x][dir > 0 ? rows - 1 - y : y] = matrix[y][x];
+  return rotated;
+}
+function rotatePiece(dir) {
+  if (overlayMenuActive) return;
+  const rotated = rotateMatrix(current, dir);
+  const oldX = pos.x;
+  let offset = 1;
+  while (collide(arena, { matrix: rotated, pos })) {
+    pos.x += offset;
+    offset = -(offset + (offset > 0 ? 1 : -1));
+    if (offset > rotated[0].length) { pos.x = oldX; return; }
+  }
+  current = rotated;
+  playSafe(rotateSound);
+}
 function resetPiece() {
   canHold = true;
   current = next || randomPiece();
   next = randomPiece();
-  pos.y = 0;
-  pos.x = ((cols / 2) | 0) - ((current[0].length / 2) | 0);
+  pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
   if (collide(arena, { matrix: current, pos })) {
+    // === GAME OVER TIME ===
     if (score > highScore) {
       highScore = score;
       highScoreInitials = promptInitials();
-      localStorage.setItem('teprisHighScore', score);
+      saveHighScore();
     }
-    arena = createMatrix(cols, rows);
-    score = level = linesCleared = 0;
-    dropInterval = 1000;
-    updateScore();
+    rgbMode = false; setRGBBackground(false);
+    running = false; paused = false;
+    showGameOverMenu();
+    return;
   }
 }
-
 function drop() {
+  if (!running || paused || overlayMenuActive) return;
   pos.y++;
   if (collide(arena, { matrix: current, pos })) {
     pos.y--;
@@ -379,8 +248,8 @@ function drop() {
   }
   dropCounter = 0;
 }
-
 function hardDrop() {
+  if (!running || paused || overlayMenuActive) return;
   while (!collide(arena, { matrix: current, pos })) pos.y++;
   pos.y--;
   merge(arena, { matrix: current, pos });
@@ -388,31 +257,18 @@ function hardDrop() {
   sweep();
   updateScore();
 }
-
 function sweep() {
   flashingCells = [];
   let rowsToClear = [];
-  for (let y = rows - 1; y >= 0; y--) {
-    if (arena[y].every(val => val !== 0)) rowsToClear.push(y);
-  }
-  if (rowsToClear.length > 0) {
-    rowsToClear.forEach(y => {
-      for (let x = 0; x < cols; x++) {
-        flashingCells.push({ x, y });
-      }
-    });
+  for (let y = ROWS - 1; y >= 0; y--) if (arena[y].every(v => v !== 0)) rowsToClear.push(y);
+  if (rowsToClear.length) {
+    rowsToClear.forEach(y => { for (let x = 0; x < COLS; x++) flashingCells.push({ x, y }); });
     flashStartTime = performance.now();
-    if (rowsToClear.length === 4) {
-      playSafe(tetrisSound);
-      triggerTetrisEffect();
-    } else {
-      playSafe(pointsSound);
-    }
+    if (rowsToClear.length === 4) { playSafe(tetrisSound); screenShake(); triggerTetrisEffect(); }
+    else playSafe(pointsSound);
+    pulseScore();
     setTimeout(() => {
-      rowsToClear.sort((a, b) => a - b).forEach(y => {
-        arena.splice(y, 1);
-        arena.unshift(Array(cols).fill(0));
-      });
+      rowsToClear.sort((a,b)=>a-b).forEach(y => { arena.splice(y,1); arena.unshift(Array(COLS).fill(0)); });
       linesCleared += rowsToClear.length;
       score += rowsToClear.length === 4 ? 1200 : rowsToClear.length * 100;
       level = Math.floor(linesCleared / 10);
@@ -422,72 +278,50 @@ function sweep() {
   }
 }
 
+// ==================== UI & EFFECTS ==========================================
 function updateScore() {
-  scoreDisplay.textContent = score;
-  highScoreDisplay.textContent = `${highScoreInitials} ${highScore}`;
+  if (scoreDisplay) scoreDisplay.textContent = score;
+  if (highScoreDisplay) highScoreDisplay.textContent = `${highScoreInitials} ${highScore}`;
   if (levelDisplay) levelDisplay.textContent = level;
   if (linesDisplay) linesDisplay.textContent = linesCleared;
-}
-
-function update(time = 0) {
-  if (paused) return;
-  const deltaTime = time - lastTime;
-  lastTime = time;
-  dropCounter += deltaTime;
-  if (dropCounter > dropInterval) drop();
-  draw();
-  if (running) requestAnimationFrame(update);
-}
-
-function drawMatrix(matrix, offset, ctx = context, size = blockSize, color = '#0ff', opacity = 1) {
-  ctx.save();
-  ctx.globalAlpha = opacity;
-  matrix.forEach((row, y) => {
-    row.forEach((val, x) => {
-      if (val) {
-        const gx = x + offset.x;
-        const gy = y + offset.y;
-        const now = performance.now();
-        ctx.fillStyle = flashingCells.some(c => c.x === gx && c.y === gy && now - flashStartTime < flashDuration) ? '#fff' : color;
-        ctx.fillRect(gx * size, gy * size, size, size);
-        ctx.strokeStyle = '#000';
-        ctx.strokeRect(gx * size, gy * size, size, size);
-      }
-    });
-  });
-  ctx.restore();
-}
-
-function drawGhostPiece() {
-  if (!current) return;
-  let ghostY = pos.y;
-  while (!collide(arena, { matrix: current, pos: { x: pos.x, y: ghostY + 1 } })) ghostY++;
-  drawMatrix(current, { x: pos.x, y: ghostY }, context, blockSize, '#888', 0.3);
-}
-
-function draw() {
-  context.fillStyle = '#111';
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  console.log('🧱 Drawing state:', { current, pos, arena });
-  drawMatrix(arena, { x: 0, y: 0 });
-  drawGhostPiece();
-  if (current && pos) {
-    drawMatrix(current, pos);
-  } else {
-    console.warn('⚠️ No current piece to draw');
-  }
-  if (previewBox && next) {
-    previewCtx.clearRect(0, 0, previewBox.width, previewBox.height);
-    const scale = Math.floor(previewBox.width / 4);
-    drawMatrix(next, { x: 1, y: 1 }, previewCtx, scale, '#0f0', 0.8);
+  // ==== INSTANT RGB MODE! ====
+  if (!rgbMode && score > highScore) {
+    rgbMode = true;
+    setRGBBackground(true);
   }
 }
-
-function randomPiece() {
-  const keys = Object.keys(pieces);
-  return createPiece(keys[Math.floor(Math.random() * keys.length)]);
+function pulseScore() {
+  if (!scoreDisplay) return;
+  scoreDisplay.classList.add('pulse');
+  setTimeout(() => scoreDisplay.classList.remove('pulse'), 300);
 }
-
+function showInsertCoinPrompt(duration = 3000) {
+  const insertCoin = document.getElementById('insert-coin');
+  if (insertCoin) {
+    insertCoin.style.display = 'block';
+    setTimeout(() => { insertCoin.style.display = 'none'; }, duration);
+  }
+}
+function screenShake(intensity = 4, duration = 200) {
+  const canvas = document.getElementById('tetris');
+  const originalTransform = canvas.style.transform;
+  let start = performance.now();
+  function shake() {
+    const elapsed = performance.now() - start;
+    if (elapsed < duration) {
+      const dx = (Math.random() - 0.5) * intensity;
+      const dy = (Math.random() - 0.5) * intensity;
+      canvas.style.transform = `translate(${dx}px, ${dy}px)`;
+      requestAnimationFrame(shake);
+    } else canvas.style.transform = originalTransform;
+  }
+  shake();
+}
+function triggerTetrisEffect() {
+  const container = document.getElementById('tetris-container') || document.body;
+  container.classList.add('tetris-flash');
+  setTimeout(() => container.classList.remove('tetris-flash'), 500);
+}
 function promptInitials() {
   const initials = prompt('🎉 NEW HIGH SCORE! Enter your initials:', highScoreInitials || '---');
   if (initials) {
@@ -497,304 +331,320 @@ function promptInitials() {
   }
   return highScoreInitials;
 }
-
-function triggerTetrisEffect() {
-  const container = document.getElementById('tetris-container') || document.body;
-  container.classList.add('tetris-flash');
-  setTimeout(() => container.classList.remove('tetris-flash'), 500);
-}
-
-function drawCRTOverlay(ctx) {
-  const { width, height } = ctx.canvas;
-  ctx.save();
-  ctx.globalAlpha = 0.05;
-  ctx.fillStyle = '#0f0';
-  for (let y = 0; y < height; y += 2) {
-    ctx.fillRect(0, y, width, 1);
-  }
-  ctx.restore();
-}
-
-function drawVHSTracking(ctx) {
-  const w = ctx.canvas.width;
-  const h = ctx.canvas.height;
-  const offset = Math.random() * 4 - 2;
-  ctx.save();
-  ctx.globalAlpha = 0.03;
-  ctx.translate(offset, 0);
-  ctx.fillStyle = '#0ff';
-  for (let y = 0; y < h; y += 8) {
-    ctx.fillRect(0, y + Math.sin(y * 0.1 + Date.now() / 100) * 2, w, 1);
-  }
-  ctx.restore();
-}
-
-function screenShake(intensity = 4, duration = 200) {
-  const canvas = document.getElementById('tetris');
-  const originalTransform = canvas.style.transform;
-  let start = performance.now();
-
-  function shake() {
-    const elapsed = performance.now() - start;
-    if (elapsed < duration) {
-      const dx = (Math.random() - 0.5) * intensity;
-      const dy = (Math.random() - 0.5) * intensity;
-      canvas.style.transform = `translate(${dx}px, ${dy}px)`;
-      requestAnimationFrame(shake);
-    } else {
-      canvas.style.transform = originalTransform;
-    }
-  }
-  shake();
-}
-
-function pulseScore() {
-  if (!scoreDisplay) return;
-  scoreDisplay.classList.add('pulse');
-  setTimeout(() => scoreDisplay.classList.remove('pulse'), 300);
-}
-
-function showInsertCoinPrompt(duration = 3000) {
-  const insertCoin = document.getElementById('insert-coin');
-  if (insertCoin) {
-    insertCoin.style.display = 'block';
-    setTimeout(() => {
-      insertCoin.style.display = 'none';
-    }, duration);
-  }
-}
-
-function fakeBootSequence(callback) {
-  const boot = document.createElement('div');
-  boot.id = 'bios-boot';
-  boot.style.position = 'absolute';
-  boot.style.top = '0';
-  boot.style.left = '0';
-  boot.style.width = '100%';
-  boot.style.height = '100%';
-  boot.style.background = '#000';
-  boot.style.color = '#0f0';
-  boot.style.fontFamily = 'Courier New, monospace';
-  boot.style.padding = '20px';
-  boot.style.zIndex = '9999';
-
-  const bootText = document.createElement('pre');
-  bootText.id = 'boot-text';
-  bootText.textContent = 'Booting TEPRIS Engine...';
-  boot.appendChild(bootText);
-  document.body.appendChild(boot);
-
-  const lines = [
-    'Loading assets...',
-    'Detecting input hardware...',
-    'Mounting ROM...',
-    'Verifying shaders...',
-    'Calibrating CRT barrel distortion...',
-    '>> READY <<'
-  ];
-
-  let i = 0;
-  const interval = setInterval(() => {
-    if (i < lines.length) {
-      bootText.textContent += '\n' + lines[i++];
-    } else {
-      clearInterval(interval);
-      setTimeout(() => {
-        boot.remove();
-        showInsertCoinPrompt();
-        callback?.();
-      }, 1000);
-    }
-  }, 400);
-}
-
-// Inject into update loop
-const originalUpdate = update;
-update = function(time = 0) {
-  if (paused) return;
-  const deltaTime = time - lastTime;
-  lastTime = time;
-  dropCounter += deltaTime;
-  if (dropCounter > dropInterval) drop();
-  draw();
-  drawVHSTracking(context);
-  drawCRTOverlay(context);
-  if (running) requestAnimationFrame(update);
-};
-
-// Inject into sweep logic
-const originalSweep = sweep;
-sweep = function() {
-  flashingCells = [];
-  let rowsToClear = [];
-  for (let y = rows - 1; y >= 0; y--) {
-    if (arena[y].every(val => val !== 0)) rowsToClear.push(y);
-  }
-  if (rowsToClear.length > 0) {
-    rowsToClear.forEach(y => {
-      for (let x = 0; x < cols; x++) {
-        flashingCells.push({ x, y });
-      }
-    });
-    flashStartTime = performance.now();
-    if (rowsToClear.length === 4) {
-      playSafe(tetrisSound);
-      screenShake();
-      triggerTetrisEffect();
-    } else {
-      playSafe(pointsSound);
-    }
-    pulseScore();
-    setTimeout(() => {
-      rowsToClear.sort((a, b) => a - b).forEach(y => {
-        arena.splice(y, 1);
-        arena.unshift(Array(cols).fill(0));
-      });
-      linesCleared += rowsToClear.length;
-      score += rowsToClear.length === 4 ? 1200 : rowsToClear.length * 100;
-      level = Math.floor(linesCleared / 10);
-      dropInterval = Math.max(100, 1000 - level * 100);
-      updateScore();
-    }, flashDuration);
-  }
-};
-
-// Use BIOS boot before game starts
-const originalDOMContentLoaded = document.onreadystatechange;
-document.addEventListener('DOMContentLoaded', () => {
-  fakeBootSequence(() => {
-    window.startTetris = () => {
-      const btn = document.getElementById('tetris-toggle');
-      if (btn) btn.click();
-    };
-    // Continue original init logic here (already in code)
+function highlightOverlayMenuItem() {
+  overlayMenuItems.forEach((btn, idx) => {
+    btn.classList.toggle('selected', idx === overlayMenuIndex);
+    if (idx === overlayMenuIndex) btn.focus();
   });
-});
-
-function resizeCanvas() {
-  const container = document.getElementById('tetris-container') || document.body;
-  const vw = container.clientWidth;
-  const vh = window.innerHeight - 160;
-  blockSize = Math.max(12, Math.min(40, Math.floor(Math.min(vw / cols, vh / rows))));
-  canvas.width = blockSize * cols;
-  canvas.height = blockSize * rows;
-  canvas.style.width = `${canvas.width}px`;
-  canvas.style.height = `${canvas.height}px`;
-  draw();
 }
 
-function resizePreviewBox() {
-  const size = Math.min(window.innerWidth * 0.2, 150);
-  previewBox.width = size;
-  previewBox.height = size;
-  previewBox.style.width = `${size}px`;
-  previewBox.style.height = `${size}px`;
-}
-
-
-document.addEventListener('keydown', (event) => {
-  if (!running) return;
-  if (event.key.toLowerCase() === 'p' || event.key === 'Enter') {
-    paused = !paused;
-    if (paused) {
-      bgMusic.pause();
-      console.log(`⏸️ Paused via ${event.key === 'Enter' ? 'Enter' : 'P'} key`);
-    } else {
-      bgMusic.play().catch(err => console.warn("🔇 Music resume failed:", err));
-      requestAnimationFrame(update);
-      console.log(`▶️ Resumed via ${event.key === 'Enter' ? 'Enter' : 'P'} key`);
-    }
+// ==================== INPUT HANDLING ========================================
+// ----- Keyboard -----
+document.addEventListener('keydown', (e) => {
+  if (overlayMenuActive) {
+    if (e.key === "ArrowDown") { overlayMenuIndex = (overlayMenuIndex + 1) % overlayMenuItems.length; highlightOverlayMenuItem(); e.preventDefault(); }
+    if (e.key === "ArrowUp") { overlayMenuIndex = (overlayMenuIndex - 1 + overlayMenuItems.length) % overlayMenuItems.length; highlightOverlayMenuItem(); e.preventDefault(); }
+    if (e.key === "Enter" || e.key === " ") { overlayMenuItems[overlayMenuIndex].click(); e.preventDefault(); }
     return;
   }
+  if (!running && (e.key === 'Enter' || e.code === 'Enter')) { window.startTetris?.(); return; }
+  if (!running) return;
+  if (e.key.toLowerCase() === 'p' || e.key === 'Enter') { paused = !paused; setPauseState(paused); return; }
   if (paused) return;
-  switch (event.key) {
-    case 'ArrowLeft':
-      pos.x--;
-      if (collide(arena, { matrix: current, pos })) pos.x++;
-      break;
-    case 'ArrowRight':
-      pos.x++;
-      if (collide(arena, { matrix: current, pos })) pos.x--;
-      break;
-    case 'ArrowDown':
-      drop();
-      break;
-    case 'ArrowUp':
-      rotatePiece(1);
-      break;
-    case ' ':
-      hardDrop();
-      break;
+  switch (e.key) {
+    case 'ArrowLeft': movePiece('left'); break;
+    case 'ArrowRight': movePiece('right'); break;
+    case 'ArrowDown': movePiece('down'); break;
+    case 'ArrowUp': rotatePiece(1); break;
+    case ' ': hardDrop(); break;
     case 'Shift':
       if (!canHold) break;
-      if (!hold) {
-        hold = current;
-        current = next;
-        next = randomPiece();
-      } else {
-        const temp = current;
-        current = hold;
-        hold = temp;
-      }
-      pos = { x: ((cols / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
+      if (!hold) { hold = current; current = next; next = randomPiece(); }
+      else { [current, hold] = [hold, current]; }
+      pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
       canHold = false;
-      console.log('🔁 Swapped with hold piece');
       break;
   }
 });
 
+// ========== GAMEPAD OVERLAY MENU ==========
+function pollOverlayMenuGamepad() {
+  if (!overlayMenuActive) return;
+  const gp = navigator.getGamepads?.()[0];
+  if (!gp) return requestAnimationFrame(pollOverlayMenuGamepad);
+
+  let navDown = gp.buttons[13]?.pressed || (gp.axes[1] > 0.5);
+  let navUp   = gp.buttons[12]?.pressed || (gp.axes[1] < -0.5);
+
+  if (!window._lastOverlayNav) window._lastOverlayNav = { up: false, down: false, btn: false };
+  if (navDown && !window._lastOverlayNav.down) {
+    overlayMenuIndex = (overlayMenuIndex + 1) % overlayMenuItems.length;
+    highlightOverlayMenuItem();
+  }
+  if (navUp && !window._lastOverlayNav.up) {
+    overlayMenuIndex = (overlayMenuIndex - 1 + overlayMenuItems.length) % overlayMenuItems.length;
+    highlightOverlayMenuItem();
+  }
+  const btnA = gp.buttons[0]?.pressed, btnStart = gp.buttons[9]?.pressed;
+  if ((btnA || btnStart) && !window._lastOverlayNav.btn) {
+    overlayMenuItems[overlayMenuIndex].click();
+  }
+  window._lastOverlayNav = { up: navUp, down: navDown, btn: (btnA || btnStart) };
+  requestAnimationFrame(pollOverlayMenuGamepad);
+}
+
+// ========== GAMEPAD AUTO MODE, SLIDE/REPEAT ==========
+function pollGamepad() {
+  if (overlayMenuActive) { requestAnimationFrame(pollGamepad); return; }
+  const gp = navigator.getGamepads?.()[0];
+  if (!gp) return requestAnimationFrame(pollGamepad);
+
+  // --- INSERT COIN: any button/axis starts game ---
+  if (!running) {
+    const anyPressed = gp.buttons.some((b, idx) => b.pressed && !lastButtonStates[idx]) ||
+      (Math.abs(gp.axes[0]) > 0.5 && !lastButtonStates._stickX) ||
+      (Math.abs(gp.axes[1]) > 0.5 && !lastButtonStates._stickY);
+    if (anyPressed) window.startTetris?.();
+    lastButtonStates = gp.buttons.map(b => b.pressed);
+    lastButtonStates._stickX = Math.abs(gp.axes[0]) > 0.5;
+    lastButtonStates._stickY = Math.abs(gp.axes[1]) > 0.5;
+    requestAnimationFrame(pollGamepad);
+    return;
+  }
+
+  // --- GAMEPLAY ---
+  if (!paused && running) {
+    // D-pad sliding
+    if (gp.buttons[14]?.pressed) { if (!lastButtonStates[14]) startRepeat('left', true); } else stopRepeat('left', true);
+    if (gp.buttons[15]?.pressed) { if (!lastButtonStates[15]) startRepeat('right', true); } else stopRepeat('right', true);
+    if (gp.buttons[13]?.pressed) { if (!lastButtonStates[13]) startRepeat('down', true); } else stopRepeat('down', true);
+
+    // Analog stick sliding (with debouncing)
+    if (gp.axes[0] < -0.5) { if (!lastButtonStates._stickLeft) startRepeat('left', false); } else stopRepeat('left', false);
+    if (gp.axes[0] > 0.5)  { if (!lastButtonStates._stickRight) startRepeat('right', false); } else stopRepeat('right', false);
+    if (gp.axes[1] > 0.5)  { if (!lastButtonStates._stickDown) startRepeat('down', false); } else stopRepeat('down', false);
+
+    // Face buttons (A, B, X, Y, Start)
+    gp.buttons.forEach((btn, idx) => {
+      const wasPressed = lastButtonStates[idx], justPressed = btn.pressed && !wasPressed;
+      if (justPressed) switch (idx) {
+        case 0: rotatePiece(1); break; // A
+        case 1: hardDrop(); break;     // B
+        case 2:
+          if (canHold) {
+            if (!hold) { hold = current; current = next; next = randomPiece(); }
+            else { [current, hold] = [hold, current]; }
+            pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
+            canHold = false;
+          }
+          break;
+        case 3: movePiece('down'); break;         // Y
+        case 9: setPauseState(!paused); break;    // Start
+      }
+    });
+  }
+
+  lastButtonStates = gp.buttons.map(b => b.pressed);
+  lastButtonStates._stickLeft = gp.axes[0] < -0.5;
+  lastButtonStates._stickRight = gp.axes[0] > 0.5;
+  lastButtonStates._stickDown = gp.axes[1] > 0.5;
+  requestAnimationFrame(pollGamepad);
+}
+window.addEventListener('gamepadconnected', () => requestAnimationFrame(pollGamepad));
+
+// ===================== TOUCH CONTROLS - same as before ======================
+function addTouchControls() {
+  let startX=0, startY=0, moved=false, longPressTimer=null, lastTap=0, threshold=30, doubleTapGap=300;
+  window.addEventListener('touchstart', e => {
+    if (!e.touches || e.touches.length > 2 || overlayMenuActive) return;
+    const t = e.touches[0]; startX=t.clientX; startY=t.clientY; moved=false;
+    longPressTimer=setTimeout(()=>{navigator.vibrate?.(100);hardDrop();},400);
+  });
+  window.addEventListener('touchmove', e => {
+    if (!e.touches || e.touches.length > 2 || overlayMenuActive) return; clearTimeout(longPressTimer);
+    const t = e.touches[0], dx = t.clientX - startX, dy = t.clientY - startY;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (Math.abs(dx) > threshold) { moved=true; navigator.vibrate?.(25);
+        if (dx>0) { movePiece('right'); }
+        else { movePiece('left'); }
+        startX = t.clientX;
+      }
+    } else if (Math.abs(dy) > threshold && dy > 0) {
+      moved = true; navigator.vibrate?.(15); movePiece('down'); startY = t.clientY;
+    }
+  });
+  window.addEventListener('touchend', e => {
+    clearTimeout(longPressTimer);
+    if (e.changedTouches.length === 2) { navigator.vibrate?.([30,30,30]); hardDrop(); return; }
+    if (moved) return;
+    const now = Date.now();
+    if (now - lastTap < doubleTapGap) { setPauseState(!paused); lastTap = 0; }
+    else { navigator.vibrate?.(10); rotatePiece(1); lastTap = now; }
+  });
+}
+
+// ==================== OVERLAY & MENU CONTROL ================================
+function setPauseState(state) {
+  paused = state;
+  if (paused) showPauseMenu();
+  else hidePauseMenu();
+  if (bgMusic) state ? bgMusic.pause() : bgMusic.play().catch(()=>{});
+  if (!state && running) requestAnimationFrame(update);
+}
+function showPauseMenu() {
+  document.getElementById('pause-menu').style.display = 'block';
+  overlayMenuActive = true;
+  overlayMenuItems = PAUSE_MENU_ITEMS.map(id => document.getElementById(id));
+  overlayMenuIndex = 0;
+  highlightOverlayMenuItem();
+  requestAnimationFrame(pollOverlayMenuGamepad);
+}
+function hidePauseMenu() {
+  document.getElementById('pause-menu').style.display = 'none';
+  overlayMenuActive = false;
+}
+function showGameOverMenu() {
+  document.getElementById('gameover-score').textContent = `Score: ${score}`;
+  const gameoverMenu = document.getElementById('gameover-menu');
+  gameoverMenu.style.display = 'block';
+  overlayMenuActive = true;
+  overlayMenuItems = [document.getElementById('restart-btn')];
+  overlayMenuIndex = 0;
+  highlightOverlayMenuItem();
+  requestAnimationFrame(pollOverlayMenuGamepad);
+}
+function hideGameOverMenu() {
+  document.getElementById('gameover-menu').style.display = 'none';
+  overlayMenuActive = false;
+}
+function showGame() {
+  const wrapper = document.getElementById('tetris-wrapper');
+  if (wrapper) wrapper.style.display = 'flex';
+  setTimeout(() => { resizeCanvas(); resizePreviewBox(); }, 0);
+}
+function resizeCanvas() {
+  const container = document.getElementById('tetris-container') || document.body;
+  const vw = container.clientWidth, vh = window.innerHeight - 160;
+  blockSize = Math.max(12, Math.min(40, Math.floor(Math.min(vw/COLS, vh/ROWS))));
+  canvas.width = blockSize*COLS; canvas.height = blockSize*ROWS;
+  canvas.style.width = `${canvas.width}px`; canvas.style.height = `${canvas.height}px`;
+  draw();
+}
+function resizePreviewBox() {
+  const size = Math.min(window.innerWidth * 0.2, 150);
+  previewBox.width = size; previewBox.height = size;
+  previewBox.style.width = `${size}px`; previewBox.style.height = `${size}px`;
+}
+
+// ==================== MAIN GAME LOOP ========================================
+function update(time=0) {
+  if (paused || overlayMenuActive) return;
+  const deltaTime = time - lastTime; lastTime = time; dropCounter += deltaTime;
+  if (dropCounter > dropInterval) drop();
+  draw();
+  if (running) requestAnimationFrame(update);
+}
+
+// ==================== BOOT SEQUENCE =========================================
+function fakeBootSequence(cb) {
+  const boot=document.createElement('div');
+  boot.id='bios-boot'; boot.style="position:absolute;top:0;left:0;width:100%;height:100%;background:#000;color:#0f0;font-family:Courier New,monospace;padding:20px;z-index:9999;";
+  const bootText=document.createElement('pre'); bootText.id='boot-text'; bootText.textContent='Booting TEPRIS Engine...'; boot.appendChild(bootText); document.body.appendChild(boot);
+  const lines=['Loading assets...','Detecting input hardware...','Mounting ROM...','Verifying shaders...','Calibrating CRT barrel distortion...','>> READY <<'];
+  let i=0, interval=setInterval(()=>{if(i<lines.length)bootText.textContent+='\n'+lines[i++];else{clearInterval(interval);setTimeout(()=>{boot.remove();showInsertCoinPrompt();cb?.();},1000);}},400);
+}
+
+// ==================== DOMContentLoaded & INIT ===============================
 document.addEventListener('DOMContentLoaded', () => {
-  window.startTetris = () => {
-    const btn = document.getElementById('tetris-toggle');
-    if (btn) btn.click();
-  };
   canvas = document.getElementById('tetris');
-  context = canvas.getContext('2d');
+  ctx = canvas.getContext('2d');
   previewBox = document.getElementById('preview-box');
   previewCtx = previewBox?.getContext('2d');
-
   scoreDisplay = document.getElementById('score');
   highScoreDisplay = document.getElementById('highScore');
   levelDisplay = document.getElementById('level');
   linesDisplay = document.getElementById('lines');
-
-  startSound = document.getElementById('coin-sound');
-  rotateSound = document.getElementById('rotate-sound');
   bgMusic = document.getElementById('bg-music');
+  coinSound = document.getElementById('coin-sound');
+  rotateSound = document.getElementById('rotate-sound');
   pointsSound = document.getElementById('points-sound');
   tetrisSound = document.getElementById('tetris-sound');
+  startSound = coinSound;
+  loadHighScore();
 
-  highScore = parseInt(localStorage.getItem('teprisHighScore')) || 0;
-  highScoreInitials = localStorage.getItem('teprisHighScoreInitials') || '---';
+  // Pause menu controls
+  const resumeBtn = document.getElementById('resume-btn');
+  const muteBtn = document.getElementById('mute-btn');
+  const inputToggleBtn = document.getElementById('input-toggle-btn');
+  resumeBtn.addEventListener('click',()=>setPauseState(false));
+  muteBtn.addEventListener('click',()=>{
+    bgMusic.muted = !bgMusic.muted;
+    muteBtn.textContent = bgMusic.muted ? '🔈 Unmute BGM' : '🔇 Mute BGM';
+  });
+  inputToggleBtn.addEventListener('click',()=>{ shuffleNextTrack(); });
 
-  document.getElementById('tetris-toggle')?.addEventListener('click', () => {
-    playSafe(startSound);
-    bgMusic.volume = 0.5;
-    playSafe(bgMusic);
-
-    arena = createMatrix(cols, rows);
+  // Game Over Menu
+  document.getElementById('restart-btn').addEventListener('click', () => {
+    hideGameOverMenu();
+    running = true; paused = false; rgbMode = false; setRGBBackground(false);
+    window.__teprisStarted = true;
+    arena = createMatrix(COLS, ROWS);
     current = randomPiece();
     next = randomPiece();
-    pos = { x: ((cols / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
-
+    pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
+    score = level = linesCleared = 0;
+    dropInterval = 1000;
     updateScore();
     addTouchControls();
-
-    canvas.style.touchAction = 'none';
-    canvas.style.webkitUserSelect = 'none';
-    canvas.style.userSelect = 'none';
-    canvas.setAttribute('tabindex', '0');
-    canvas.addEventListener('focus', () => console.log('🧠 Canvas focused'));
-    setTimeout(() => canvas.focus(), 100);
-    resizeCanvas();
-    resizePreviewBox();
+    showGame();
     draw();
     drop();
-
-    running = true;
     requestAnimationFrame(update);
   });
+
+  // Pause hotkey
+  document.addEventListener('keydown',(e)=>{
+    if ((e.key==='Escape'||e.key.toLowerCase()==='p') && !overlayMenuActive)
+      setPauseState(!paused);
+  });
+
+  // Boot sequence and start game
+  fakeBootSequence(()=>{
+    document.getElementById('tetris-toggle')?.addEventListener('click', () => {
+      window.startTetris();
+      if (bgMusic) {
+        currentTrackIndex = Math.floor(Math.random() * bgTracks.length);
+        bgMusic.src = bgTracks[currentTrackIndex];
+        bgMusic.volume = 0.5;
+        playSafe(bgMusic);
+      }
+    });
+    window.startTetris = function() {
+      if (window.__teprisStarted) return;
+      window.__teprisStarted = true;
+      playSafe(startSound);
+      if (bgMusic) { bgMusic.volume = 0.5; playSafe(bgMusic); }
+      arena = createMatrix(COLS, ROWS);
+      current = randomPiece();
+      next = randomPiece();
+      pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
+      updateScore();
+      addTouchControls();
+      showGame();
+      draw();
+      drop();
+      running = true;
+      paused = false;
+      rgbMode = false;
+      setRGBBackground(false);
+      requestAnimationFrame(update);
+
+      // Hide overlays/insert coin
+      document.getElementById('insert-coin')?.style.setProperty('display', 'none');
+      document.getElementById('tetris-toggle')?.style.setProperty('display', 'none');
+    };
+  });
+
+  window.addEventListener('resize',()=>{ resizeCanvas(); resizePreviewBox(); });
+  window.addEventListener('load', () => { resizeCanvas(); resizePreviewBox(); });
 });
-
-
-console.warn('⚠️ startTetris is missing!');

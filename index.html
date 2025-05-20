@@ -4,13 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>TEPRIS Arcade 🎮</title>
-
-  <!-- Icons -->
-  <link rel="icon" href="assets/favicon-32x32.png" sizes="32x32" type="image/png">
-  <link rel="apple-touch-icon" href="assets/apple-icon-180x180.png" sizes="180x180">
-  <meta name="theme-color" content="#000000">
-
-  <!-- Fonts & Styles -->
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
@@ -27,245 +20,91 @@
       align-items: center;
       flex-direction: column;
     }
-
-    #arcade-shell {
-      background: #000;
-      border: 10px solid #0ff;
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: 0 0 20px #0ff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      position: relative;
-    }
-
-    #tetris-toggle {
-      background: #0ff;
-      color: #000;
-      font-family: inherit;
-      font-size: 1rem;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      margin-bottom: 10px;
-      cursor: pointer;
-      box-shadow: 0 0 10px #0ff;
-      transition: background 0.2s ease;
-    }
-
-    #tetris-toggle:hover {
-      background: #00aaff;
-    }
-
-    #tetris-wrapper {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      background: #111;
-      padding: 10px;
-      border-radius: 10px;
-    }
-
-    #game-area {
-      display: flex;
-      gap: 20px;
-    }
-
-    canvas#preview-box {
-      width: 80px;
-      height: 80px;
-      border: 2px dashed #0ff;
-      margin-bottom: 10px;
-      background: rgba(0, 0, 0, 0.5);
-    }
-
-    #landing-preview {
-      width: 200px;
-      height: 20px;
-      border: 1px solid #0ff;
-      margin-top: 10px;
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    #crt-flash {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: white;
-      opacity: 0;
-      z-index: 9999;
-      pointer-events: none;
-    }
-
-    @keyframes crt-flash {
-      0%   { opacity: 1; }
-      30%  { opacity: 0.4; }
-      60%  { opacity: 0.9; }
-      100% { opacity: 0; }
-    }
-
-    #ready-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 3rem;
-      color: #0ff;
-      background: rgba(0, 0, 0, 0.85);
-      text-shadow: 0 0 10px #0ff;
-      z-index: 10000;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      font-family: 'Press Start 2P', monospace;
-    }
-
-    canvas {
-      touch-action: none;
-    }
+    #arcade-shell { background: #000; border: 10px solid #0ff; border-radius: 20px; padding: 20px; box-shadow: 0 0 20px #0ff; display: flex; flex-direction: column; align-items: center; position: relative;}
+    #tetris-toggle { background: #0ff; color: #000; font-family: inherit; font-size: 1rem; padding: 10px 20px; border: none; border-radius: 8px; margin-bottom: 10px; cursor: pointer; box-shadow: 0 0 10px #0ff; transition: background 0.2s ease;}
+    #tetris-toggle:hover { background: #00aaff;}
+    #tetris-wrapper { display: none; flex-direction: column; align-items: center; background: #111; padding: 10px; border-radius: 10px;}
+    #game-area { display: flex; gap: 20px;}
+    canvas#preview-box { width: 80px; height: 80px; border: 2px dashed #0ff; margin-bottom: 10px; background: rgba(0, 0, 0, 0.5);}
+    #landing-preview { width: 200px; height: 20px; border: 1px solid #0ff; margin-top: 10px; background: rgba(255, 255, 255, 0.1);}
+    #pause-menu { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.9); color: #0f0; padding: 20px; border: 2px solid #0f0; font-family: 'Press Start 2P', monospace; z-index: 10000; display: none;}
+    #pause-menu button { display: block; margin: 10px auto; padding: 10px; font-size: 1rem; background: #000; color: #0f0; border: 1px solid #0f0; cursor: pointer;}
+    #pause-menu button:hover { background: #0f0; color: #000;}
+    #crt-flash { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: white; opacity: 0; z-index: 9999; pointer-events: none;}
+    @keyframes crt-flash { 0%{opacity:1;} 30%{opacity:0.4;} 60%{opacity:0.9;} 100%{opacity:0;}}
+    #ready-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; font-size: 3rem; color: #0ff; background: rgba(0, 0, 0, 0.85); text-shadow: 0 0 10px #0ff; z-index: 10000; opacity: 0; transition: opacity 0.3s ease; font-family: 'Press Start 2P', monospace;}
+    canvas { touch-action: none;}
   </style>
 </head>
 <body>
-
-  <!-- Visual FX -->
   <div id="crt-flash"></div>
   <div id="ready-overlay">READY…</div>
-
-  <!-- Audio -->
-  <audio id="coin-sound" src="coin.wav" preload="auto"></audio>
-  <audio id="rotate-sound" src="boop.mp3" preload="auto"></audio>
-  <audio id="bg-music" src="assets\background.mp3" preload="auto" loop></audio>
-  <audio id="points-sound" src="points.mp3" preload="auto"></audio>
-  <audio id="tetris-sound" src="tepris!.mp3" preload="auto"></audio>
-
-  <!-- Game Container -->
+<div id="pause-menu">
+  <button id="resume-btn">▶ Resume</button>
+  <button id="mute-btn">🔇 Mute BGM</button>
+  <button id="input-toggle-btn">🔄 Shuffle Music</button>
+  <div id="controls-layout">
+    <hr>
+    <div class="controls-title">Controls</div>
+    <div class="controls-row">
+      <b>D-Pad / Left Stick:</b> Move
+    </div>
+    <div class="controls-row">
+      <b>A / Z / ⬆️:</b> Rotate
+    </div>
+    <div class="controls-row">
+      <b>B / X / Space:</b> Hard Drop
+    </div>
+    <div class="controls-row">
+      <b>Y / Down:</b> Soft Drop
+    </div>
+    <div class="controls-row">
+      <b>X / Shift:</b> Hold
+    </div>
+    <div class="controls-row">
+      <b>Start / Enter:</b> Pause / Resume
+    </div>
+  </div>
+</div>
+  <audio id="coin-sound" src="assets/coin.wav" preload="auto"></audio>
+  <audio id="rotate-sound" src="assets/boop.mp3" preload="auto"></audio>
+  <audio id="bg-music" src="assets/background.mp3" preload="auto"></audio>
+  <audio id="points-sound" src="assets/points.mp3" preload="auto"></audio>
+  <audio id="tetris-sound" src="assets/tepris!.mp3" preload="auto"></audio>
   <div id="arcade-shell">
     <button id="tetris-toggle">🪙</button>
-<div id="insert-coin" style="
-  position:absolute;
-  top:40%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  font-family:'Press Start 2P', monospace;
-  font-size:20px;
-  color:#0f0;
-  text-shadow:0 0 3px #0f0;
-  display:none;
-  z-index:9998;
-">
-  INSERT COIN
-</div>
-
-<div id="tetris-wrapper">
-  <canvas id="preview-box"></canvas>
-
-  <div id="game-area">
-    <div id="tetris-container">
-      <canvas id="tetris"></canvas>
-
-      <div id="landing-preview"></div>
-
-<div id="scoreboard">
-  <div>Score: <span id="score">0</span></div>
-  <div>High Score: <span id="highScore">---</span></div>
-  <div>Level: <span id="level">0</span></div>
-  <div>Lines: <span id="lines">0</span></div>
-</div>
-
-      <div id="touch-controls">
-        <button id="left-btn">⬅️</button>
-        <button id="rotate-btn">🔄</button>
-        <button id="right-btn">➡️</button>
-        <button id="down-btn">⬇️</button>
-        <button id="harddrop-btn">🟦 Hard Drop</button>
-        <button id="hold-btn">🧤 Pause</button>
+    <div id="insert-coin" style="position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-family:'Press Start 2P', monospace;font-size:20px;color:#0f0;text-shadow:0 0 3px #0f0;display:none;z-index:9998;">INSERT COIN</div>
+    <div id="tetris-wrapper">
+      <canvas id="preview-box"></canvas>
+      <div id="game-area">
+        <div id="tetris-container">
+          <canvas id="tetris"></canvas>
+          <div id="landing-preview"></div>
+          <div id="scoreboard">
+            <div>Score: <span id="score">0</span></div>
+            <div>High Score: <span id="highScore">---</span></div>
+            <div>Level: <span id="level">0</span></div>
+            <div>Lines: <span id="lines">0</span></div>
+          </div>
+          <div id="touch-controls">
+            <button id="left-btn">⬅️</button>
+            <button id="rotate-btn">🔄</button>
+            <button id="right-btn">➡️</button>
+            <button id="down-btn">⬇️</button>
+            <button id="harddrop-btn">🟦 Hard Drop</button>
+            <button id="hold-btn">🧤 Pause</button>
+          </div>
+        </div>
       </div>
-
+    </div>
+  </div>
+<div id="gameover-menu" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+background:rgba(0,0,0,0.92); color:#0ff; padding:36px 36px 22px 36px; border:2px solid #0ff; z-index:99999; border-radius:12px; min-width:220px; text-align:center;">
+  <div style="font-size:2.1rem; font-family:'Press Start 2P',monospace; letter-spacing:0.08em; margin-bottom:14px;">GAME OVER</div>
+  <div id="gameover-score" style="color:#fff; font-size:1.1rem; margin-bottom:18px;">Score: 0</div>
+  <button id="restart-btn" style="font-size:1.5rem; font-family:inherit; background:#0ff; color:#000; border:none; border-radius:8px; padding:10px 34px; box-shadow:0 0 10px #0ff;">RESTART</button>
+</div>
   <!-- Main Game Logic -->
   <script src="tepris.js"></script>
-
-  <!-- UI + Boot -->
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const toggleBtn = document.getElementById('tetris-toggle');
-    const wrapper = document.getElementById('tetris-wrapper');
-    const flash = document.getElementById('crt-flash');
-    const coinSound = document.getElementById('coin-sound');
-    const bgMusic = document.getElementById('bg-music');
-    const rotateSound = document.getElementById('rotate-sound');
-    const pointsSound = document.getElementById('points-sound');
-
-    let audioUnlocked = false;
-    let audioContext;
-
-    function unlockAudio() {
-      if (audioUnlocked) return Promise.resolve();
-
-      return new Promise((resolve, reject) => {
-        try {
-          audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          if (audioContext.state === 'suspended') {
-            audioContext.resume().then(() => console.log('🔊 AudioContext resumed'));
-          }
-
-          const sounds = [coinSound, rotateSound, bgMusic, pointsSound];
-          const unlocks = sounds.map(snd => {
-            if (!snd) return Promise.resolve();
-            return snd.play().then(() => {
-              snd.pause();
-              snd.currentTime = 0;
-            }).catch(err => {
-              console.warn(`🔇 Audio failed to unlock:`, err);
-              return Promise.resolve(); // ignore errors
-            });
-          });
-
-          Promise.all(unlocks).then(() => {
-            audioUnlocked = true;
-            resolve();
-          });
-        } catch (e) {
-          reject(e);
-        }
-      });
-    }
-
-    toggleBtn.addEventListener('pointerdown', async () => {
-      console.log("🪙 Insert coin clicked!");
-
-      try {
-        await unlockAudio();
-
-        // Flash effect
-        flash.style.animation = 'crt-flash 0.6s ease';
-        setTimeout(() => flash.style.animation = '', 600);
-
-        // Play coin after unlock
-        coinSound.play().catch(() => {});
-
-        // Show game
-        toggleBtn.style.display = 'none';
-        wrapper.style.display = 'flex';
-
-        // Start game
-        if (typeof startTetris === 'function' || typeof window.startTetris === 'function') {
-          (startTetris || window.startTetris)();
-        } else {
-          console.warn('❌ startTetris is not defined.');
-        }
-      } catch (err) {
-        console.error('🔇 Failed to unlock audio or start game:', err);
-      }
-    });
-  });
-const insertCoinPrompt = document.getElementById('insert-coin');
-insertCoinPrompt.style.display = 'block';
-</script>
 </body>
 </html>
