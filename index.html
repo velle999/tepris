@@ -117,6 +117,17 @@
     <div id="gameover-score" style="color:#fff; font-size:1.1rem; margin-bottom:18px;">Score: 0</div>
     <button id="restart-btn" style="font-size:1.5rem; font-family:inherit; background:#0ff; color:#000; border:none; border-radius:8px; padding:10px 34px; box-shadow:0 0 10px #0ff;">RESTART</button>
   </div>
+<div id="initials-overlay" style="
+  display:none; position:fixed; top:0; left:0; width:100vw; height:100vh;
+  background:rgba(0,0,0,0.96); color:#0ff; z-index:100000; text-align:center; align-items:center; justify-content:center; flex-direction:column;">
+  <div style="font-size:2.2rem; margin-top:14vh;">NEW HIGH SCORE!</div>
+  <div style="margin:22px auto;">Enter your initials:</div>
+  <input id="initials-input" type="text" maxlength="3"
+         style="font-size:2.5rem; width:90px; text-align:center; text-transform:uppercase; font-family:monospace; color:#0ff; background:#111; border:2px solid #0ff; border-radius:8px;">
+  <br>
+  <button id="initials-submit"
+    style="margin-top:18px; font-size:1.2rem; background:#0ff; color:#000; border:none; border-radius:8px; padding:8px 30px;">OK</button>
+</div>
   <!-- Main Game Logic -->
   <script src="tepris.js"></script>
 </body>

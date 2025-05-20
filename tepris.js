@@ -10,7 +10,6 @@ let flashingCells = [], flashStartTime = 0, flashDuration = 400;
 let dropInterval = 1000, dropCounter = 0, lastTime = 0;
 let canvas, ctx, previewBox, previewCtx, scoreDisplay, highScoreDisplay, levelDisplay, linesDisplay;
 let bgMusic, coinSound, rotateSound, pointsSound, tetrisSound, startSound;
-let lastButtonStates = Array(17).fill(false);
 
 // === BACKGROUND MUSIC TRACKS ===
 const bgTracks = [
@@ -33,6 +32,10 @@ let stickHold = { left: false, right: false, down: false };
 let dpadTimers = { left: null, right: null, down: null };
 let stickTimers = { left: null, right: null, down: null };
 const INITIAL_DELAY = 220, REPEAT_RATE = 40;
+
+// Gamepad poll state
+let lastButtonStates = Array(17).fill(false);
+let gamepadPollActive = false;
 
 // --- MOVEMENT ---
 function movePiece(dir) {
@@ -228,14 +231,22 @@ function resetPiece() {
   if (collide(arena, { matrix: current, pos })) {
     // === GAME OVER TIME ===
     if (score > highScore) {
-      highScore = score;
-      highScoreInitials = promptInitials();
-      saveHighScore();
+      paused = true;
+      promptInitials((val) => {
+        highScore = score;
+        highScoreInitials = val;
+        saveHighScore();
+        updateScore();
+        paused = false;
+        rgbMode = false; setRGBBackground(false);
+        running = false;
+        showGameOverMenu();
+      });
+    } else {
+      rgbMode = false; setRGBBackground(false);
+      running = false; paused = false;
+      showGameOverMenu();
     }
-    rgbMode = false; setRGBBackground(false);
-    running = false; paused = false;
-    // Always show game over menu
-    showGameOverMenu();
     return;
   }
 }
@@ -287,7 +298,6 @@ function updateScore() {
   if (highScoreDisplay) highScoreDisplay.textContent = `${highScoreInitials} ${highScore}`;
   if (levelDisplay) levelDisplay.textContent = level;
   if (linesDisplay) linesDisplay.textContent = linesCleared;
-  // ==== INSTANT RGB MODE! ====
   if (!rgbMode && score > highScore) {
     rgbMode = true;
     setRGBBackground(true);
@@ -332,25 +342,32 @@ function triggerTetrisEffect() {
   setTimeout(() => container.classList.remove('tetris-flash'), 500);
 }
 
-function promptInitials() {
-  let initials = prompt('🎉 NEW HIGH SCORE! Enter your initials:', highScoreInitials || '---');
-  if (initials === null || initials === undefined || !initials.trim()) {
-    initials = highScoreInitials || "---";
+function promptInitials(callback) {
+  const overlay = document.getElementById('initials-overlay');
+  const input = document.getElementById('initials-input');
+  const submit = document.getElementById('initials-submit');
+  overlay.style.display = 'flex';
+  input.value = '';
+  input.focus();
+  function cleanup() {
+    overlay.style.display = 'none';
+    submit.removeEventListener('click', onSubmit);
+    input.removeEventListener('keydown', onKeyDown);
   }
-  const clean = initials.toUpperCase().substring(0, 3);
-  localStorage.setItem('teprisHighScoreInitials', clean);
-  return clean;
-}
-
-function highlightOverlayMenuItem() {
-  overlayMenuItems.forEach((btn, idx) => {
-    btn.classList.toggle('selected', idx === overlayMenuIndex);
-    if (idx === overlayMenuIndex) btn.focus();
-  });
+  function onSubmit() {
+    let val = input.value.trim().toUpperCase().substring(0, 3);
+    if (!val) val = "---";
+    cleanup();
+    if (typeof callback === "function") callback(val);
+  }
+  function onKeyDown(e) {
+    if (e.key === 'Enter') onSubmit();
+  }
+  submit.addEventListener('click', onSubmit);
+  input.addEventListener('keydown', onKeyDown);
 }
 
 // ==================== INPUT HANDLING ========================================
-// ----- Keyboard -----
 document.addEventListener('keydown', (e) => {
   if (overlayMenuActive) {
     if (e.key === "ArrowDown") { overlayMenuIndex = (overlayMenuIndex + 1) % overlayMenuItems.length; highlightOverlayMenuItem(); e.preventDefault(); }
@@ -378,15 +395,13 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// ========== GAMEPAD OVERLAY MENU ==========
+// GAMEPAD STUFF...
 function pollOverlayMenuGamepad() {
   if (!overlayMenuActive) return;
   const gp = navigator.getGamepads?.()[0];
   if (!gp) return requestAnimationFrame(pollOverlayMenuGamepad);
-
   let navDown = gp.buttons[13]?.pressed || (gp.axes[1] > 0.5);
   let navUp   = gp.buttons[12]?.pressed || (gp.axes[1] < -0.5);
-
   if (!window._lastOverlayNav) window._lastOverlayNav = { up: false, down: false, btn: false };
   if (navDown && !window._lastOverlayNav.down) {
     overlayMenuIndex = (overlayMenuIndex + 1) % overlayMenuItems.length;
@@ -404,13 +419,19 @@ function pollOverlayMenuGamepad() {
   requestAnimationFrame(pollOverlayMenuGamepad);
 }
 
-// ========== GAMEPAD AUTO MODE, SLIDE/REPEAT ==========
+function startGamepadPolling() {
+  if (gamepadPollActive) return;
+  gamepadPollActive = true;
+  requestAnimationFrame(pollGamepad);
+}
+function resetGamepadPolling() {
+  gamepadPollActive = false;
+  setTimeout(startGamepadPolling, 0);
+}
 function pollGamepad() {
-  if (overlayMenuActive) { requestAnimationFrame(pollGamepad); return; }
+  if (!gamepadPollActive) return;
   const gp = navigator.getGamepads?.()[0];
   if (!gp) return requestAnimationFrame(pollGamepad);
-
-  // --- INSERT COIN: any button/axis starts game ---
   if (!running) {
     const anyPressed = gp.buttons.some((b, idx) => b.pressed && !lastButtonStates[idx]) ||
       (Math.abs(gp.axes[0]) > 0.5 && !lastButtonStates._stickX) ||
@@ -419,28 +440,20 @@ function pollGamepad() {
     lastButtonStates = gp.buttons.map(b => b.pressed);
     lastButtonStates._stickX = Math.abs(gp.axes[0]) > 0.5;
     lastButtonStates._stickY = Math.abs(gp.axes[1]) > 0.5;
-    requestAnimationFrame(pollGamepad);
-    return;
+    return requestAnimationFrame(pollGamepad);
   }
-
-  // --- GAMEPLAY ---
   if (!paused && running) {
-    // D-pad sliding
     if (gp.buttons[14]?.pressed) { if (!lastButtonStates[14]) startRepeat('left', true); } else stopRepeat('left', true);
     if (gp.buttons[15]?.pressed) { if (!lastButtonStates[15]) startRepeat('right', true); } else stopRepeat('right', true);
     if (gp.buttons[13]?.pressed) { if (!lastButtonStates[13]) startRepeat('down', true); } else stopRepeat('down', true);
-
-    // Analog stick sliding (with debouncing)
     if (gp.axes[0] < -0.5) { if (!lastButtonStates._stickLeft) startRepeat('left', false); } else stopRepeat('left', false);
     if (gp.axes[0] > 0.5)  { if (!lastButtonStates._stickRight) startRepeat('right', false); } else stopRepeat('right', false);
     if (gp.axes[1] > 0.5)  { if (!lastButtonStates._stickDown) startRepeat('down', false); } else stopRepeat('down', false);
-
-    // Face buttons (A, B, X, Y, Start)
     gp.buttons.forEach((btn, idx) => {
       const wasPressed = lastButtonStates[idx], justPressed = btn.pressed && !wasPressed;
       if (justPressed) switch (idx) {
-        case 0: rotatePiece(1); break; // A
-        case 1: hardDrop(); break;     // B
+        case 0: rotatePiece(1); break;
+        case 1: hardDrop(); break;
         case 2:
           if (canHold) {
             if (!hold) { hold = current; current = next; next = randomPiece(); }
@@ -449,21 +462,19 @@ function pollGamepad() {
             canHold = false;
           }
           break;
-        case 3: movePiece('down'); break;         // Y
-        case 9: setPauseState(!paused); break;    // Start
+        case 3: movePiece('down'); break;
+        case 9: setPauseState(!paused); break;
       }
     });
   }
-
   lastButtonStates = gp.buttons.map(b => b.pressed);
   lastButtonStates._stickLeft = gp.axes[0] < -0.5;
   lastButtonStates._stickRight = gp.axes[0] > 0.5;
   lastButtonStates._stickDown = gp.axes[1] > 0.5;
   requestAnimationFrame(pollGamepad);
 }
-window.addEventListener('gamepadconnected', () => requestAnimationFrame(pollGamepad));
 
-// ===================== TOUCH CONTROLS - same as before ======================
+// ===================== TOUCH CONTROLS ===========================
 function addTouchControls() {
   let startX=0, startY=0, moved=false, longPressTimer=null, lastTap=0, threshold=30, doubleTapGap=300;
   window.addEventListener('touchstart', e => {
@@ -492,19 +503,21 @@ function addTouchControls() {
     if (now - lastTap < doubleTapGap) { setPauseState(!paused); lastTap = 0; }
     else { navigator.vibrate?.(10); rotatePiece(1); lastTap = now; }
   });
+  addTouchButtonListeners();
 }
-
-  // ======= ON-SCREEN TOUCH BUTTONS =========
-  // If you want desktop mouse click too, add both event types!
-
+function addTouchButtonListeners() {
   document.getElementById('left-btn')?.addEventListener('touchstart', e => { e.preventDefault(); movePiece('left'); });
+  document.getElementById('left-btn')?.addEventListener('mousedown', e => { e.preventDefault(); movePiece('left'); });
   document.getElementById('right-btn')?.addEventListener('touchstart', e => { e.preventDefault(); movePiece('right'); });
+  document.getElementById('right-btn')?.addEventListener('mousedown', e => { e.preventDefault(); movePiece('right'); });
   document.getElementById('down-btn')?.addEventListener('touchstart', e => { e.preventDefault(); movePiece('down'); });
+  document.getElementById('down-btn')?.addEventListener('mousedown', e => { e.preventDefault(); movePiece('down'); });
   document.getElementById('rotate-btn')?.addEventListener('touchstart', e => { e.preventDefault(); rotatePiece(1); });
+  document.getElementById('rotate-btn')?.addEventListener('mousedown', e => { e.preventDefault(); rotatePiece(1); });
   document.getElementById('harddrop-btn')?.addEventListener('touchstart', e => { e.preventDefault(); hardDrop(); });
+  document.getElementById('harddrop-btn')?.addEventListener('mousedown', e => { e.preventDefault(); hardDrop(); });
   document.getElementById('hold-btn')?.addEventListener('touchstart', e => {
     e.preventDefault();
-    // By default, use for hold. Change to setPauseState(!paused) if you want pause instead!
     if (canHold) {
       if (!hold) { hold = current; current = next; next = randomPiece(); }
       else { [current, hold] = [hold, current]; }
@@ -514,14 +527,7 @@ function addTouchControls() {
       setPauseState(!paused);
     }
   });
-
-  // (Optional: Support desktop with click handlers)
-  document.getElementById('left-btn')?.addEventListener('click', e => { e.preventDefault(); movePiece('left'); });
-  document.getElementById('right-btn')?.addEventListener('click', e => { e.preventDefault(); movePiece('right'); });
-  document.getElementById('down-btn')?.addEventListener('click', e => { e.preventDefault(); movePiece('down'); });
-  document.getElementById('rotate-btn')?.addEventListener('click', e => { e.preventDefault(); rotatePiece(1); });
-  document.getElementById('harddrop-btn')?.addEventListener('click', e => { e.preventDefault(); hardDrop(); });
-  document.getElementById('hold-btn')?.addEventListener('click', e => {
+  document.getElementById('hold-btn')?.addEventListener('mousedown', e => {
     e.preventDefault();
     if (canHold) {
       if (!hold) { hold = current; current = next; next = randomPiece(); }
@@ -532,6 +538,7 @@ function addTouchControls() {
       setPauseState(!paused);
     }
   });
+}
 
 // ==================== OVERLAY & MENU CONTROL ================================
 function setPauseState(state) {
@@ -585,6 +592,14 @@ function resizePreviewBox() {
   previewBox.width = size; previewBox.height = size;
   previewBox.style.width = `${size}px`; previewBox.style.height = `${size}px`;
 }
+function highlightOverlayMenuItem() {
+  overlayMenuItems.forEach((btn, idx) => {
+    if (btn) {
+      btn.classList.toggle('selected', idx === overlayMenuIndex);
+      if (idx === overlayMenuIndex) btn.focus();
+    }
+  });
+}
 
 // ==================== MAIN GAME LOOP ========================================
 function update(time=0) {
@@ -626,15 +641,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const resumeBtn = document.getElementById('resume-btn');
   const muteBtn = document.getElementById('mute-btn');
   const inputToggleBtn = document.getElementById('input-toggle-btn');
-  resumeBtn.addEventListener('click',()=>setPauseState(false));
-  muteBtn.addEventListener('click',()=>{
+  resumeBtn?.addEventListener('click',()=>setPauseState(false));
+  muteBtn?.addEventListener('click',()=>{
     bgMusic.muted = !bgMusic.muted;
     muteBtn.textContent = bgMusic.muted ? '🔈 Unmute BGM' : '🔇 Mute BGM';
   });
-  inputToggleBtn.addEventListener('click',()=>{ shuffleNextTrack(); });
+  inputToggleBtn?.addEventListener('click',()=>{ shuffleNextTrack(); });
 
   // Game Over Menu
-  document.getElementById('restart-btn').addEventListener('click', () => {
+  document.getElementById('restart-btn')?.addEventListener('click', () => {
     hideGameOverMenu();
     running = true; paused = false; rgbMode = false; setRGBBackground(false);
     window.__teprisStarted = true;
@@ -650,6 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
     draw();
     drop();
     requestAnimationFrame(update);
+    resetGamepadPolling();
   });
 
   // Pause hotkey
@@ -689,12 +705,15 @@ document.addEventListener('DOMContentLoaded', () => {
       setRGBBackground(false);
       requestAnimationFrame(update);
 
-      // Hide overlays/insert coin
       document.getElementById('insert-coin')?.style.setProperty('display', 'none');
       document.getElementById('tetris-toggle')?.style.setProperty('display', 'none');
+      resetGamepadPolling();
     };
   });
 
   window.addEventListener('resize',()=>{ resizeCanvas(); resizePreviewBox(); });
   window.addEventListener('load', () => { resizeCanvas(); resizePreviewBox(); });
-});
+
+  // --- START THE GAMEPAD LOOP! ---
+  startGamepadPolling();
+}); // <--- THIS BRACE AND PAREN CLOSE THE BIG FUNCTION

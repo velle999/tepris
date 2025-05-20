@@ -1,8 +1,8 @@
 version: 1.0.0
 files:
   - url: TEPRIS-Arcade-Setup-1.0.0.exe
-    sha512: tvJ6RvSNNaNoy5eboUcPkAMFX1eAXeq4CdgDV+weuojfsyzHYjFpUiokz9ZQkw6qNItrVAlvhdHbc59h5jd4PQ==
-    size: 88242613
+    sha512: UJnX7IOB3omU15HQtGLAX8VjZMqHQ9fZfz14c2cokpMmS3A25Jacq7GlPmVjro9nKYujsFnKWfJGWuQNzJ8W9w==
+    size: 88243259
 path: TEPRIS-Arcade-Setup-1.0.0.exe
-sha512: tvJ6RvSNNaNoy5eboUcPkAMFX1eAXeq4CdgDV+weuojfsyzHYjFpUiokz9ZQkw6qNItrVAlvhdHbc59h5jd4PQ==
-releaseDate: '2025-05-20T03:04:53.993Z'
+sha512: UJnX7IOB3omU15HQtGLAX8VjZMqHQ9fZfz14c2cokpMmS3A25Jacq7GlPmVjro9nKYujsFnKWfJGWuQNzJ8W9w==
+releaseDate: '2025-05-20T03:47:20.524Z'
