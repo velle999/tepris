@@ -1,0 +1,26 @@
+directories:
+  output: dist
+  buildResources: assets
+appId: com.velle.tepris
+productName: TEPRIS Arcade
+copyright: Copyright © 2025
+files:
+  - filter:
+      - '**/*'
+      - '!node_modules'
+      - '!dist'
+      - '!build'
+      - '!Dockerfile'
+      - '!*.log'
+linux:
+  target:
+    - deb
+  maintainer: Velle <velle@example.com>
+  category: Game
+  icon: assets/icon.png
+win:
+  target:
+    - nsis
+    - portable
+  icon: assets/icon.ico
+electronVersion: 29.4.6

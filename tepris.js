@@ -290,11 +290,13 @@ function updateScore() {
     setRGBBackground(true);
   }
 }
+
 function pulseScore() {
   if (!scoreDisplay) return;
   scoreDisplay.classList.add('pulse');
   setTimeout(() => scoreDisplay.classList.remove('pulse'), 300);
 }
+
 function showInsertCoinPrompt(duration = 3000) {
   const insertCoin = document.getElementById('insert-coin');
   if (insertCoin) {
@@ -302,6 +304,7 @@ function showInsertCoinPrompt(duration = 3000) {
     setTimeout(() => { insertCoin.style.display = 'none'; }, duration);
   }
 }
+
 function screenShake(intensity = 4, duration = 200) {
   const canvas = document.getElementById('tetris');
   const originalTransform = canvas.style.transform;
@@ -313,15 +316,19 @@ function screenShake(intensity = 4, duration = 200) {
       const dy = (Math.random() - 0.5) * intensity;
       canvas.style.transform = `translate(${dx}px, ${dy}px)`;
       requestAnimationFrame(shake);
-    } else canvas.style.transform = originalTransform;
+    } else {
+      canvas.style.transform = originalTransform;
+    }
   }
   shake();
 }
+
 function triggerTetrisEffect() {
   const container = document.getElementById('tetris-container') || document.body;
   container.classList.add('tetris-flash');
   setTimeout(() => container.classList.remove('tetris-flash'), 500);
 }
+
 function promptInitials() {
   const initials = prompt('🎉 NEW HIGH SCORE! Enter your initials:', highScoreInitials || '---');
   if (initials) {
@@ -331,6 +338,7 @@ function promptInitials() {
   }
   return highScoreInitials;
 }
+
 function highlightOverlayMenuItem() {
   overlayMenuItems.forEach((btn, idx) => {
     btn.classList.toggle('selected', idx === overlayMenuIndex);
@@ -482,6 +490,45 @@ function addTouchControls() {
     else { navigator.vibrate?.(10); rotatePiece(1); lastTap = now; }
   });
 }
+
+  // ======= ON-SCREEN TOUCH BUTTONS =========
+  // If you want desktop mouse click too, add both event types!
+
+  document.getElementById('left-btn')?.addEventListener('touchstart', e => { e.preventDefault(); movePiece('left'); });
+  document.getElementById('right-btn')?.addEventListener('touchstart', e => { e.preventDefault(); movePiece('right'); });
+  document.getElementById('down-btn')?.addEventListener('touchstart', e => { e.preventDefault(); movePiece('down'); });
+  document.getElementById('rotate-btn')?.addEventListener('touchstart', e => { e.preventDefault(); rotatePiece(1); });
+  document.getElementById('harddrop-btn')?.addEventListener('touchstart', e => { e.preventDefault(); hardDrop(); });
+  document.getElementById('hold-btn')?.addEventListener('touchstart', e => {
+    e.preventDefault();
+    // By default, use for hold. Change to setPauseState(!paused) if you want pause instead!
+    if (canHold) {
+      if (!hold) { hold = current; current = next; next = randomPiece(); }
+      else { [current, hold] = [hold, current]; }
+      pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
+      canHold = false;
+    } else {
+      setPauseState(!paused);
+    }
+  });
+
+  // (Optional: Support desktop with click handlers)
+  document.getElementById('left-btn')?.addEventListener('click', e => { e.preventDefault(); movePiece('left'); });
+  document.getElementById('right-btn')?.addEventListener('click', e => { e.preventDefault(); movePiece('right'); });
+  document.getElementById('down-btn')?.addEventListener('click', e => { e.preventDefault(); movePiece('down'); });
+  document.getElementById('rotate-btn')?.addEventListener('click', e => { e.preventDefault(); rotatePiece(1); });
+  document.getElementById('harddrop-btn')?.addEventListener('click', e => { e.preventDefault(); hardDrop(); });
+  document.getElementById('hold-btn')?.addEventListener('click', e => {
+    e.preventDefault();
+    if (canHold) {
+      if (!hold) { hold = current; current = next; next = randomPiece(); }
+      else { [current, hold] = [hold, current]; }
+      pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
+      canHold = false;
+    } else {
+      setPauseState(!paused);
+    }
+  });
 
 // ==================== OVERLAY & MENU CONTROL ================================
 function setPauseState(state) {

@@ -1,0 +1,45 @@
+{
+  "name": "tepris-arcade",
+  "version": "1.0.0",
+  "description": "TEPRIS: Retro-style falling block game for Steam Deck and Linux.",
+  "main": "main.js",
+  "author": "Velle <velle@example.com>",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win nsis portable",
+    "build:linux": "electron-builder --linux deb"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.velle.tepris",
+    "productName": "TEPRIS Arcade",
+    "copyright": "Copyright © 2025",
+    "directories": {
+      "buildResources": "assets",
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules",
+      "!dist",
+      "!build",
+      "!Dockerfile",
+      "!*.log"
+    ],
+    "linux": {
+      "target": ["deb"],
+      "maintainer": "Velle <velle@example.com>",
+      "category": "Game",
+      "icon": "assets/icon.png"
+    },
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "assets/icon.ico"
+    }
+  }
+}
