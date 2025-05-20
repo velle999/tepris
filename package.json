@@ -8,7 +8,8 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win nsis portable",
-    "build:linux": "electron-builder --linux deb"
+    "build:linux": "electron-builder --linux deb",
+    "clean": "rm -rf dist/*"
   },
   "dependencies": {},
   "devDependencies": {
@@ -29,7 +30,8 @@
       "!dist",
       "!build",
       "!Dockerfile",
-      "!*.log"
+      "!*.log",
+      "assets/**/*"
     ],
     "linux": {
       "target": ["deb"],

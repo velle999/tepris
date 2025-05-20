@@ -12,6 +12,7 @@ files:
       - '!build'
       - '!Dockerfile'
       - '!*.log'
+      - assets/**/*
 linux:
   target:
     - deb

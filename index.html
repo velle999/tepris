@@ -34,38 +34,51 @@
     @keyframes crt-flash { 0%{opacity:1;} 30%{opacity:0.4;} 60%{opacity:0.9;} 100%{opacity:0;}}
     #ready-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; font-size: 3rem; color: #0ff; background: rgba(0, 0, 0, 0.85); text-shadow: 0 0 10px #0ff; z-index: 10000; opacity: 0; transition: opacity 0.3s ease; font-family: 'Press Start 2P', monospace;}
     canvas { touch-action: none;}
+    /* New initials modal style */
+    #initials-modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.95); color: #0ff; z-index: 99999;
+      align-items: center; justify-content: center; flex-direction: column;
+      font-family: 'Press Start 2P', monospace;
+    }
+    #initials-modal input {
+      font-size: 2.1rem; font-family: inherit; text-transform: uppercase; text-align: center;
+      background: #000; color: #0ff; border: 2px solid #0ff; border-radius: 6px; width: 88px; margin-bottom: 18px;
+      outline: none; letter-spacing: 0.15em;
+    }
+    #initials-modal button {
+      font-size: 1.3rem; background: #0ff; color: #000; border: none; border-radius: 8px;
+      padding: 7px 22px; box-shadow: 0 0 10px #0ff; cursor: pointer;
+      font-family: inherit;
+    }
+    #initials-modal button:hover { background: #00aaff; }
   </style>
 </head>
 <body>
   <div id="crt-flash"></div>
   <div id="ready-overlay">READY…</div>
-<div id="pause-menu">
-  <button id="resume-btn">▶ Resume</button>
-  <button id="mute-btn">🔇 Mute BGM</button>
-  <button id="input-toggle-btn">🔄 Shuffle Music</button>
-  <div id="controls-layout">
-    <hr>
-    <div class="controls-title">Controls</div>
-    <div class="controls-row">
-      <b>D-Pad / Left Stick:</b> Move
-    </div>
-    <div class="controls-row">
-      <b>A / Z / ⬆️:</b> Rotate
-    </div>
-    <div class="controls-row">
-      <b>B / X / Space:</b> Hard Drop
-    </div>
-    <div class="controls-row">
-      <b>Y / Down:</b> Soft Drop
-    </div>
-    <div class="controls-row">
-      <b>X / Shift:</b> Hold
-    </div>
-    <div class="controls-row">
-      <b>Start / Enter:</b> Pause / Resume
+  <div id="pause-menu">
+    <button id="resume-btn">▶ Resume</button>
+    <button id="mute-btn">🔇 Mute BGM</button>
+    <button id="input-toggle-btn">🔄 Shuffle Music</button>
+    <div id="controls-layout">
+      <hr>
+      <div class="controls-title">Controls</div>
+      <div class="controls-row"><b>D-Pad / Left Stick:</b> Move</div>
+      <div class="controls-row"><b>A / Z / ⬆️:</b> Rotate</div>
+      <div class="controls-row"><b>B / X / Space:</b> Hard Drop</div>
+      <div class="controls-row"><b>Y / Down:</b> Soft Drop</div>
+      <div class="controls-row"><b>X / Shift:</b> Hold</div>
+      <div class="controls-row"><b>Start / Enter:</b> Pause / Resume</div>
     </div>
   </div>
-</div>
+  <!-- 🏆 Initials Modal (NEW!) -->
+  <div id="initials-modal">
+    <div style="font-size:2.1rem; margin-bottom:18px;">🎉 NEW HIGH SCORE!</div>
+    <div style="font-size:1.1rem; margin-bottom:8px;">Enter your initials:</div>
+    <input id="initials-input" maxlength="3" autocomplete="off" autocapitalize="on" spellcheck="false">
+    <button id="submit-initials">OK</button>
+  </div>
   <audio id="coin-sound" src="assets/coin.wav" preload="auto"></audio>
   <audio id="rotate-sound" src="assets/boop.mp3" preload="auto"></audio>
   <audio id="bg-music" src="assets/background.mp3" preload="auto"></audio>
@@ -98,12 +111,12 @@
       </div>
     </div>
   </div>
-<div id="gameover-menu" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-background:rgba(0,0,0,0.92); color:#0ff; padding:36px 36px 22px 36px; border:2px solid #0ff; z-index:99999; border-radius:12px; min-width:220px; text-align:center;">
-  <div style="font-size:2.1rem; font-family:'Press Start 2P',monospace; letter-spacing:0.08em; margin-bottom:14px;">GAME OVER</div>
-  <div id="gameover-score" style="color:#fff; font-size:1.1rem; margin-bottom:18px;">Score: 0</div>
-  <button id="restart-btn" style="font-size:1.5rem; font-family:inherit; background:#0ff; color:#000; border:none; border-radius:8px; padding:10px 34px; box-shadow:0 0 10px #0ff;">RESTART</button>
-</div>
+  <div id="gameover-menu" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    background:rgba(0,0,0,0.92); color:#0ff; padding:36px 36px 22px 36px; border:2px solid #0ff; z-index:99999; border-radius:12px; min-width:220px; text-align:center;">
+    <div style="font-size:2.1rem; font-family:'Press Start 2P',monospace; letter-spacing:0.08em; margin-bottom:14px;">GAME OVER</div>
+    <div id="gameover-score" style="color:#fff; font-size:1.1rem; margin-bottom:18px;">Score: 0</div>
+    <button id="restart-btn" style="font-size:1.5rem; font-family:inherit; background:#0ff; color:#000; border:none; border-radius:8px; padding:10px 34px; box-shadow:0 0 10px #0ff;">RESTART</button>
+  </div>
   <!-- Main Game Logic -->
   <script src="tepris.js"></script>
 </body>

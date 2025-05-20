@@ -34,6 +34,7 @@ let dpadTimers = { left: null, right: null, down: null };
 let stickTimers = { left: null, right: null, down: null };
 const INITIAL_DELAY = 220, REPEAT_RATE = 40;
 
+// --- MOVEMENT ---
 function movePiece(dir) {
   if (!running || paused || overlayMenuActive) return;
   if (dir === "left")  { pos.x--; if (collide(arena, { matrix: current, pos })) pos.x++; }
@@ -223,6 +224,7 @@ function resetPiece() {
   current = next || randomPiece();
   next = randomPiece();
   pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
+
   if (collide(arena, { matrix: current, pos })) {
     // === GAME OVER TIME ===
     if (score > highScore) {
@@ -232,6 +234,7 @@ function resetPiece() {
     }
     rgbMode = false; setRGBBackground(false);
     running = false; paused = false;
+    // Always show game over menu
     showGameOverMenu();
     return;
   }
@@ -330,13 +333,13 @@ function triggerTetrisEffect() {
 }
 
 function promptInitials() {
-  const initials = prompt('🎉 NEW HIGH SCORE! Enter your initials:', highScoreInitials || '---');
-  if (initials) {
-    const clean = initials.toUpperCase().substring(0, 3);
-    localStorage.setItem('teprisHighScoreInitials', clean);
-    return clean;
+  let initials = prompt('🎉 NEW HIGH SCORE! Enter your initials:', highScoreInitials || '---');
+  if (initials === null || initials === undefined || !initials.trim()) {
+    initials = highScoreInitials || "---";
   }
-  return highScoreInitials;
+  const clean = initials.toUpperCase().substring(0, 3);
+  localStorage.setItem('teprisHighScoreInitials', clean);
+  return clean;
 }
 
 function highlightOverlayMenuItem() {
