@@ -127,6 +127,7 @@ function setRGBBackground(enable) {
 
 // ==================== RENDERING =============================================
 function drawMatrix(matrix, offset, _ctx = ctx, size = blockSize, color = "#0ff", opacity = 1) {
+  if (!matrix || !offset || !_ctx) return; // <--- Fix: Guard clause
   _ctx.save();
   _ctx.globalAlpha = opacity;
   const t = performance.now();
@@ -166,13 +167,14 @@ function drawVHSTracking(_ctx) {
 function draw() {
   ctx.fillStyle = rgbMode ? getRGBColor(performance.now()) : "#111";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  drawMatrix(arena, { x: 0, y: 0 });
+
+  if (arena) drawMatrix(arena, { x: 0, y: 0 });
   drawGhostPiece();
   if (current && pos) drawMatrix(current, pos);
   if (previewBox && next) {
     previewCtx.clearRect(0,0,previewBox.width,previewBox.height);
     const scale = Math.floor(previewBox.width/4);
-    drawMatrix(next, { x: 1, y: 1 }, previewCtx, scale, rgbMode ? getRGBColor(performance.now()+333) : "#0f0", 0.8);
+    if (next) drawMatrix(next, { x: 1, y: 1 }, previewCtx, scale, rgbMode ? getRGBColor(performance.now()+333) : "#0f0", 0.8);
   }
   drawVHSTracking(ctx);
   drawCRTOverlay(ctx);
@@ -636,6 +638,30 @@ document.addEventListener('DOMContentLoaded', () => {
   tetrisSound = document.getElementById('tetris-sound');
   startSound = coinSound;
   loadHighScore();
+
+  // --- BG MUSIC AUTOSHUFLE LOGIC ---
+  function setupBgMusicLoop() {
+    if (!bgMusic) return;
+    bgMusic.removeEventListener('ended', onTrackEnd); // In case of hot reload
+    bgMusic.addEventListener('ended', onTrackEnd);
+
+    function onTrackEnd() {
+      let nextIdx = currentTrackIndex;
+      if (bgTracks.length > 1) {
+        while (nextIdx === currentTrackIndex) {
+          nextIdx = Math.floor(Math.random() * bgTracks.length);
+        }
+      }
+      currentTrackIndex = nextIdx;
+      bgMusic.src = bgTracks[currentTrackIndex];
+      bgMusic.currentTime = 0;
+      bgMusic.play().catch((err) => {
+        // Show error or prompt user for interaction in Electron
+        console.warn("Failed to play shuffled track:", err);
+      });
+    }
+  }
+  setupBgMusicLoop();
 
   // Pause menu controls
   const resumeBtn = document.getElementById('resume-btn');
