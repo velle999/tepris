@@ -548,19 +548,25 @@ function addTouchControls() {
 }
 
 function addTouchButtonListeners() {
-  // Utility to avoid double/multiple events
   function bindTouchMouse(id, fn) {
     const el = document.getElementById(id);
     if (!el) return;
-    let ignoreMouse = false;
+
+    // Per-element touch lock flag
+    let lastTouch = 0;
+
     el.addEventListener('touchstart', e => {
       e.preventDefault();
-      ignoreMouse = true;
-      setTimeout(() => { ignoreMouse = false; }, 400);
+      lastTouch = Date.now();
       fn();
     }, { passive: false });
+
     el.addEventListener('mousedown', e => {
-      if (ignoreMouse) return;
+      // If mousedown happens within 500ms of a touchstart, ignore it!
+      if (Date.now() - lastTouch < 500) {
+        // console.log(`[${id}] Ignored ghost mousedown`);
+        return;
+      }
       e.preventDefault();
       fn();
     });
