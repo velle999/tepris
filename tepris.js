@@ -1,6 +1,8 @@
 // ============================================================================
-//    TEPRIS ENGINE - RGB SLIDE + BG - With Game Over, Restart, Menu Control
+//    TEPRIS ENGINE: RGB SLIDE + BG + FLASH LINES + WORKING TOUCH BUTTONS
+//    2025 Velle & ChatGPT: Because normal Tetris is for cowards
 // ============================================================================
+
 const COLS = 10, ROWS = 20;
 let blockSize = 24;
 let arena, current, next, hold, canHold, pos;
@@ -11,7 +13,6 @@ let dropInterval = 1000, dropCounter = 0, lastTime = 0;
 let canvas, ctx, previewBox, previewCtx, scoreDisplay, highScoreDisplay, levelDisplay, linesDisplay;
 let bgMusic, coinSound, rotateSound, pointsSound, tetrisSound, startSound;
 
-// === BACKGROUND MUSIC TRACKS ===
 const bgTracks = [
   'assets/background.mp3',
   'assets/bg-2.mp3',
@@ -19,62 +20,11 @@ const bgTracks = [
 ];
 let currentTrackIndex = Math.floor(Math.random() * bgTracks.length);
 
-// Menu overlays
 let overlayMenuItems = [], overlayMenuIndex = 0;
 const PAUSE_MENU_ITEMS = ['resume-btn', 'mute-btn', 'input-toggle-btn'];
 
-// CRT/VHS
 const CRT_EFFECT = true, VHS_EFFECT = true;
 
-// ============ REPEAT MOVEMENT (SLIDING) ==============
-let dpadHold = { left: false, right: false, down: false };
-let stickHold = { left: false, right: false, down: false };
-let dpadTimers = { left: null, right: null, down: null };
-let stickTimers = { left: null, right: null, down: null };
-const INITIAL_DELAY = 220, REPEAT_RATE = 40;
-
-// Gamepad poll state
-let lastButtonStates = Array(17).fill(false);
-let gamepadPollActive = false;
-
-// --- MOVEMENT ---
-function movePiece(dir) {
-  if (!running || paused || overlayMenuActive) return;
-  if (dir === "left")  { pos.x--; if (collide(arena, { matrix: current, pos })) pos.x++; }
-  if (dir === "right") { pos.x++; if (collide(arena, { matrix: current, pos })) pos.x--; }
-  if (dir === "down")  drop();
-}
-
-function startRepeat(dir, isDpad) {
-  if (overlayMenuActive) return;
-  if (isDpad) {
-    dpadHold[dir] = true;
-    if (dpadTimers[dir]) clearTimeout(dpadTimers[dir]);
-    movePiece(dir);
-    dpadTimers[dir] = setTimeout(function repeat() {
-      if (dpadHold[dir]) {
-        movePiece(dir);
-        dpadTimers[dir] = setTimeout(repeat, REPEAT_RATE);
-      }
-    }, INITIAL_DELAY);
-  } else {
-    stickHold[dir] = true;
-    if (stickTimers[dir]) clearTimeout(stickTimers[dir]);
-    movePiece(dir);
-    stickTimers[dir] = setTimeout(function repeat() {
-      if (stickHold[dir]) {
-        movePiece(dir);
-        stickTimers[dir] = setTimeout(repeat, REPEAT_RATE);
-      }
-    }, INITIAL_DELAY);
-  }
-}
-function stopRepeat(dir, isDpad) {
-  if (isDpad) { dpadHold[dir] = false; if (dpadTimers[dir]) clearTimeout(dpadTimers[dir]); }
-  else { stickHold[dir] = false; if (stickTimers[dir]) clearTimeout(stickTimers[dir]); }
-}
-
-// ==================== PIECES & MATRIX =======================================
 const pieces = {
   I: [[1, 1, 1, 1]],
   J: [[1, 0, 0], [1, 1, 1]],
@@ -84,28 +34,19 @@ const pieces = {
   T: [[0, 1, 0], [1, 1, 1]],
   Z: [[1, 1, 0], [0, 1, 1]]
 };
-function createMatrix(w, h) { return Array.from({ length: h }, () => Array(w).fill(0)); }
-function createPiece(type) { return pieces[type].map(r => [...r]); }
-function randomPiece() { const keys = Object.keys(pieces); return createPiece(keys[Math.floor(Math.random() * keys.length)]); }
 
-// ==================== AUDIO UTILS ===========================================
-function playSafe(audio) {
-  if (!audio || typeof audio.play !== 'function') return;
-  try { audio.pause(); audio.currentTime = 0; audio.play().catch(()=>{}); } catch {}
-}
+let dpadHold = { left: false, right: false, down: false };
+let stickHold = { left: false, right: false, down: false };
+let dpadTimers = { left: null, right: null, down: null };
+let stickTimers = { left: null, right: null, down: null };
+const INITIAL_DELAY = 220, REPEAT_RATE = 40;
 
-// ==================== STORAGE UTILS =========================================
-function saveHighScore() {
-  localStorage.setItem('teprisHighScore', score);
-  localStorage.setItem('teprisHighScoreInitials', highScoreInitials);
-}
-function loadHighScore() {
-  highScore = parseInt(localStorage.getItem('teprisHighScore')) || 0;
-  highScoreInitials = localStorage.getItem('teprisHighScoreInitials') || "---";
-}
+let lastButtonStates = Array(17).fill(false);
+let gamepadPollActive = false;
 
-// ==================== RGB MODE ===========================================
 let rgbMode = false;
+let isFlashing = false; // Important: prevents new drops during flash
+
 function getRGBColor(t) {
   const r = Math.floor(128 + 128 * Math.sin(t/600));
   const g = Math.floor(128 + 128 * Math.sin(t/600 + 2));
@@ -124,10 +65,28 @@ function setRGBBackground(enable) {
     el.style.backgroundSize = "";
   }
 }
+function saveHighScore() {
+  localStorage.setItem('teprisHighScore', highScore);
+  localStorage.setItem('teprisHighScoreInitials', highScoreInitials);
+}
+function loadHighScore() {
+  highScore = parseInt(localStorage.getItem('teprisHighScore')) || 0;
+  highScoreInitials = localStorage.getItem('teprisHighScoreInitials') || "---";
+}
+function createMatrix(w, h) { return Array.from({ length: h }, () => Array(w).fill(0)); }
+function createPiece(type) { return pieces[type].map(r => [...r]); }
+function randomPiece() {
+  const keys = Object.keys(pieces);
+  return createPiece(keys[Math.floor(Math.random() * keys.length)]);
+}
+function playSafe(audio) {
+  if (!audio || typeof audio.play !== 'function') return;
+  try { audio.pause(); audio.currentTime = 0; audio.play().catch(()=>{}); } catch {}
+}
 
-// ==================== RENDERING =============================================
+// --- RENDERING ---
 function drawMatrix(matrix, offset, _ctx = ctx, size = blockSize, color = "#0ff", opacity = 1) {
-  if (!matrix || !offset || !_ctx) return; // <--- Fix: Guard clause
+  if (!matrix || !offset || !_ctx) return;
   _ctx.save();
   _ctx.globalAlpha = opacity;
   const t = performance.now();
@@ -135,7 +94,8 @@ function drawMatrix(matrix, offset, _ctx = ctx, size = blockSize, color = "#0ff"
     if (val) {
       const gx = x + offset.x, gy = y + offset.y, now = t + gx*77 + gy*99;
       let fillC = rgbMode ? getRGBColor(now) : color;
-      if (flashingCells.some(c=>c.x===gx&&c.y===gy&&now-flashStartTime<flashDuration)) fillC = "#fff";
+      // --- FLASH EFFECT FOR ROWS BEING CLEARED ---
+      if (flashingCells.some(c=>c.x===gx&&c.y===gy)) fillC = "#fff";
       _ctx.fillStyle = fillC;
       _ctx.fillRect(gx*size, gy*size, size, size);
       _ctx.strokeStyle = "#000";
@@ -180,15 +140,40 @@ function draw() {
   drawCRTOverlay(ctx);
 }
 
-// ==================== GAME LOGIC ============================================
-function shuffleNextTrack() {
-  let nextIndex;
-  do { nextIndex = Math.floor(Math.random() * bgTracks.length); } while (nextIndex === currentTrackIndex);
-  currentTrackIndex = nextIndex;
-  if (bgMusic) {
-    bgMusic.src = bgTracks[currentTrackIndex];
-    bgMusic.play().catch(err => console.warn("🎵 Audio play error:", err));
+// --- GAME LOGIC ---
+function movePiece(dir) {
+  if (!running || paused || overlayMenuActive || isFlashing) return;
+  if (dir === "left")  { pos.x--; if (collide(arena, { matrix: current, pos })) pos.x++; }
+  if (dir === "right") { pos.x++; if (collide(arena, { matrix: current, pos })) pos.x--; }
+  if (dir === "down")  drop();
+}
+function startRepeat(dir, isDpad) {
+  if (overlayMenuActive) return;
+  if (isDpad) {
+    dpadHold[dir] = true;
+    if (dpadTimers[dir]) clearTimeout(dpadTimers[dir]);
+    movePiece(dir);
+    dpadTimers[dir] = setTimeout(function repeat() {
+      if (dpadHold[dir]) {
+        movePiece(dir);
+        dpadTimers[dir] = setTimeout(repeat, REPEAT_RATE);
+      }
+    }, INITIAL_DELAY);
+  } else {
+    stickHold[dir] = true;
+    if (stickTimers[dir]) clearTimeout(stickTimers[dir]);
+    movePiece(dir);
+    stickTimers[dir] = setTimeout(function repeat() {
+      if (stickHold[dir]) {
+        movePiece(dir);
+        stickTimers[dir] = setTimeout(repeat, REPEAT_RATE);
+      }
+    }, INITIAL_DELAY);
   }
+}
+function stopRepeat(dir, isDpad) {
+  if (isDpad) { dpadHold[dir] = false; if (dpadTimers[dir]) clearTimeout(dpadTimers[dir]); }
+  else { stickHold[dir] = false; if (stickTimers[dir]) clearTimeout(stickTimers[dir]); }
 }
 function collide(arena, player) {
   const [m, o] = [player.matrix, player.pos];
@@ -212,7 +197,7 @@ function rotateMatrix(matrix, dir) {
   return rotated;
 }
 function rotatePiece(dir) {
-  if (overlayMenuActive) return;
+  if (overlayMenuActive || isFlashing) return;
   const rotated = rotateMatrix(current, dir);
   const oldX = pos.x;
   let offset = 1;
@@ -229,12 +214,11 @@ function resetPiece() {
   current = next || randomPiece();
   next = randomPiece();
   pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
-
   if (collide(arena, { matrix: current, pos })) {
-    // === GAME OVER TIME ===
+    // GAME OVER!
     if (score > highScore) {
       paused = true;
-      promptInitials((val) => {
+      promptInitialsModal((val) => {
         highScore = score;
         highScoreInitials = val;
         saveHighScore();
@@ -253,7 +237,7 @@ function resetPiece() {
   }
 }
 function drop() {
-  if (!running || paused || overlayMenuActive) return;
+  if (!running || paused || overlayMenuActive || isFlashing) return;
   pos.y++;
   if (collide(arena, { matrix: current, pos })) {
     pos.y--;
@@ -265,7 +249,7 @@ function drop() {
   dropCounter = 0;
 }
 function hardDrop() {
-  if (!running || paused || overlayMenuActive) return;
+  if (!running || paused || overlayMenuActive || isFlashing) return;
   while (!collide(arena, { matrix: current, pos })) pos.y++;
   pos.y--;
   merge(arena, { matrix: current, pos });
@@ -276,25 +260,42 @@ function hardDrop() {
 function sweep() {
   flashingCells = [];
   let rowsToClear = [];
-  for (let y = ROWS - 1; y >= 0; y--) if (arena[y].every(v => v !== 0)) rowsToClear.push(y);
+  for (let y = ROWS - 1; y >= 0; y--)
+    if (arena[y].every(v => v !== 0)) rowsToClear.push(y);
+
   if (rowsToClear.length) {
-    rowsToClear.forEach(y => { for (let x = 0; x < COLS; x++) flashingCells.push({ x, y }); });
+    // 1. Mark which cells should flash
+    rowsToClear.forEach(y => {
+      for (let x = 0; x < COLS; x++) flashingCells.push({ x, y });
+    });
     flashStartTime = performance.now();
+    isFlashing = true;
+
     if (rowsToClear.length === 4) { playSafe(tetrisSound); screenShake(); triggerTetrisEffect(); }
     else playSafe(pointsSound);
     pulseScore();
-    setTimeout(() => {
-      rowsToClear.sort((a,b)=>a-b).forEach(y => { arena.splice(y,1); arena.unshift(Array(COLS).fill(0)); });
+
+    function finishFlash() {
+      rowsToClear.sort((a,b)=>a-b).forEach(y => {
+        arena.splice(y,1);
+        arena.unshift(Array(COLS).fill(0));
+      });
       linesCleared += rowsToClear.length;
       score += rowsToClear.length === 4 ? 1200 : rowsToClear.length * 100;
       level = Math.floor(linesCleared / 10);
       dropInterval = Math.max(100, 1000 - level * 100);
       updateScore();
-    }, flashDuration);
+      flashingCells = [];
+      isFlashing = false;
+      if (running) requestAnimationFrame(update);
+    }
+
+    setTimeout(finishFlash, flashDuration);
+    requestAnimationFrame(update);
   }
 }
 
-// ==================== UI & EFFECTS ==========================================
+// --- UI / FX ---
 function updateScore() {
   if (scoreDisplay) scoreDisplay.textContent = score;
   if (highScoreDisplay) highScoreDisplay.textContent = `${highScoreInitials} ${highScore}`;
@@ -305,13 +306,11 @@ function updateScore() {
     setRGBBackground(true);
   }
 }
-
 function pulseScore() {
   if (!scoreDisplay) return;
   scoreDisplay.classList.add('pulse');
   setTimeout(() => scoreDisplay.classList.remove('pulse'), 300);
 }
-
 function showInsertCoinPrompt(duration = 3000) {
   const insertCoin = document.getElementById('insert-coin');
   if (insertCoin) {
@@ -319,7 +318,6 @@ function showInsertCoinPrompt(duration = 3000) {
     setTimeout(() => { insertCoin.style.display = 'none'; }, duration);
   }
 }
-
 function screenShake(intensity = 4, duration = 200) {
   const canvas = document.getElementById('tetris');
   const originalTransform = canvas.style.transform;
@@ -337,39 +335,46 @@ function screenShake(intensity = 4, duration = 200) {
   }
   shake();
 }
-
 function triggerTetrisEffect() {
   const container = document.getElementById('tetris-container') || document.body;
   container.classList.add('tetris-flash');
   setTimeout(() => container.classList.remove('tetris-flash'), 500);
 }
-
-function promptInitials(callback) {
-  const overlay = document.getElementById('initials-overlay');
+function promptInitialsModal(callback) {
+  const modal = document.getElementById('initials-modal');
   const input = document.getElementById('initials-input');
-  const submit = document.getElementById('initials-submit');
-  overlay.style.display = 'flex';
+  const ok = document.getElementById('submit-initials');
+  if (!modal || !input || !ok) {
+    alert('Initials modal missing!');
+    callback('---');
+    return;
+  }
+  modal.style.display = 'flex';
   input.value = '';
-  input.focus();
+  setTimeout(() => input.focus(), 100);
   function cleanup() {
-    overlay.style.display = 'none';
-    submit.removeEventListener('click', onSubmit);
+    modal.style.display = 'none';
+    ok.removeEventListener('click', onSubmit);
     input.removeEventListener('keydown', onKeyDown);
   }
   function onSubmit() {
     let val = input.value.trim().toUpperCase().substring(0, 3);
     if (!val) val = "---";
     cleanup();
-    if (typeof callback === "function") callback(val);
+    callback(val);
   }
   function onKeyDown(e) {
     if (e.key === 'Enter') onSubmit();
+    if (e.key === 'Escape') {
+      cleanup();
+      callback("---");
+    }
   }
-  submit.addEventListener('click', onSubmit);
+  ok.addEventListener('click', onSubmit);
   input.addEventListener('keydown', onKeyDown);
 }
 
-// ==================== INPUT HANDLING ========================================
+// --- KEYBOARD INPUT ---
 document.addEventListener('keydown', (e) => {
   if (overlayMenuActive) {
     if (e.key === "ArrowDown") { overlayMenuIndex = (overlayMenuIndex + 1) % overlayMenuItems.length; highlightOverlayMenuItem(); e.preventDefault(); }
@@ -380,7 +385,7 @@ document.addEventListener('keydown', (e) => {
   if (!running && (e.key === 'Enter' || e.code === 'Enter')) { window.startTetris?.(); return; }
   if (!running) return;
   if (e.key.toLowerCase() === 'p' || e.key === 'Enter') { paused = !paused; setPauseState(paused); return; }
-  if (paused) return;
+  if (paused || isFlashing) return;
   switch (e.key) {
     case 'ArrowLeft': movePiece('left'); break;
     case 'ArrowRight': movePiece('right'); break;
@@ -397,7 +402,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// GAMEPAD STUFF...
+// --- GAMEPAD POLLING ---
 function pollOverlayMenuGamepad() {
   if (!overlayMenuActive) return;
   const gp = navigator.getGamepads?.()[0];
@@ -476,7 +481,7 @@ function pollGamepad() {
   requestAnimationFrame(pollGamepad);
 }
 
-// ===================== TOUCH CONTROLS ===========================
+// --- TOUCH CONTROLS, NOW WORKING, I SWEAR ---
 function addTouchControls() {
   let startX=0, startY=0, moved=false, longPressTimer=null, lastTap=0, threshold=30, doubleTapGap=300;
   window.addEventListener('touchstart', e => {
@@ -508,16 +513,22 @@ function addTouchControls() {
   addTouchButtonListeners();
 }
 function addTouchButtonListeners() {
+  // LEFT
   document.getElementById('left-btn')?.addEventListener('touchstart', e => { e.preventDefault(); movePiece('left'); });
   document.getElementById('left-btn')?.addEventListener('mousedown', e => { e.preventDefault(); movePiece('left'); });
+  // RIGHT
   document.getElementById('right-btn')?.addEventListener('touchstart', e => { e.preventDefault(); movePiece('right'); });
   document.getElementById('right-btn')?.addEventListener('mousedown', e => { e.preventDefault(); movePiece('right'); });
+  // DOWN
   document.getElementById('down-btn')?.addEventListener('touchstart', e => { e.preventDefault(); movePiece('down'); });
   document.getElementById('down-btn')?.addEventListener('mousedown', e => { e.preventDefault(); movePiece('down'); });
+  // ROTATE
   document.getElementById('rotate-btn')?.addEventListener('touchstart', e => { e.preventDefault(); rotatePiece(1); });
   document.getElementById('rotate-btn')?.addEventListener('mousedown', e => { e.preventDefault(); rotatePiece(1); });
+  // HARDDROP
   document.getElementById('harddrop-btn')?.addEventListener('touchstart', e => { e.preventDefault(); hardDrop(); });
   document.getElementById('harddrop-btn')?.addEventListener('mousedown', e => { e.preventDefault(); hardDrop(); });
+  // HOLD (swap piece, or pause if not allowed)
   document.getElementById('hold-btn')?.addEventListener('touchstart', e => {
     e.preventDefault();
     if (canHold) {
@@ -542,7 +553,7 @@ function addTouchButtonListeners() {
   });
 }
 
-// ==================== OVERLAY & MENU CONTROL ================================
+// --- OVERLAY/MENU ---
 function setPauseState(state) {
   paused = state;
   if (paused) showPauseMenu();
@@ -603,16 +614,17 @@ function highlightOverlayMenuItem() {
   });
 }
 
-// ==================== MAIN GAME LOOP ========================================
+// --- MAIN GAME LOOP ---
 function update(time=0) {
   if (paused || overlayMenuActive) return;
-  const deltaTime = time - lastTime; lastTime = time; dropCounter += deltaTime;
-  if (dropCounter > dropInterval) drop();
+  const deltaTime = time - lastTime; lastTime = time;
+  if (!isFlashing) dropCounter += deltaTime;
+  if (!isFlashing && dropCounter > dropInterval) drop();
   draw();
-  if (running) requestAnimationFrame(update);
+  if (running || isFlashing) requestAnimationFrame(update);
 }
 
-// ==================== BOOT SEQUENCE =========================================
+// --- FAKE BIOS BOOT ---
 function fakeBootSequence(cb) {
   const boot=document.createElement('div');
   boot.id='bios-boot'; boot.style="position:absolute;top:0;left:0;width:100%;height:100%;background:#000;color:#0f0;font-family:Courier New,monospace;padding:20px;z-index:9999;";
@@ -621,7 +633,7 @@ function fakeBootSequence(cb) {
   let i=0, interval=setInterval(()=>{if(i<lines.length)bootText.textContent+='\n'+lines[i++];else{clearInterval(interval);setTimeout(()=>{boot.remove();showInsertCoinPrompt();cb?.();},1000);}},400);
 }
 
-// ==================== DOMContentLoaded & INIT ===============================
+// --- INIT ---
 document.addEventListener('DOMContentLoaded', () => {
   canvas = document.getElementById('tetris');
   ctx = canvas.getContext('2d');
@@ -642,7 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- BG MUSIC AUTOSHUFLE LOGIC ---
   function setupBgMusicLoop() {
     if (!bgMusic) return;
-    bgMusic.removeEventListener('ended', onTrackEnd); // In case of hot reload
+    bgMusic.removeEventListener('ended', onTrackEnd);
     bgMusic.addEventListener('ended', onTrackEnd);
 
     function onTrackEnd() {
@@ -656,7 +668,6 @@ document.addEventListener('DOMContentLoaded', () => {
       bgMusic.src = bgTracks[currentTrackIndex];
       bgMusic.currentTime = 0;
       bgMusic.play().catch((err) => {
-        // Show error or prompt user for interaction in Electron
         console.warn("Failed to play shuffled track:", err);
       });
     }
@@ -742,4 +753,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- START THE GAMEPAD LOOP! ---
   startGamepadPolling();
-}); // <--- THIS BRACE AND PAREN CLOSE THE BIG FUNCTION
+});
+
+// END OF FILE. If you read this far, treat yourself to an extra line clear. Or a pizza.
