@@ -105,8 +105,9 @@ html, body {
   background: rgba(0, 0, 0, 0.85);
   border: 4px double #0ff;
   image-rendering: pixelated;
-  max-width: 100dvw;
-  max-height: 100dvh;
+  /* Remove hard aspect and max-* caps that override JS sizing: */
+  /* aspect-ratio: 10 / 20;  <-- remove */
+  /* max-height / max-width caps are not needed and can cause overflow math */
 }
 
 /* === Preview Box === */

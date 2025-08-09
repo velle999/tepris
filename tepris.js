@@ -671,19 +671,54 @@ function getViewport() {
 
 function resizeCanvas() {
   if (!canvas) return;
-  const { vw, vh } = getViewport();
 
-  // Maintain 10:20 aspect
-  const cellSize = Math.floor(Math.min(vw / COLS, vh / ROWS));
-  blockSize = Math.max(8, Math.min(64, cellSize));
+  // Use visual viewport if available (mobile address bars etc.)
+  const vv = window.visualViewport;
+  const vw = Math.floor(vv?.width ?? window.innerWidth);
 
+  // Measure container and subtract HUD heights that sit below the canvas
+  const container = document.getElementById('tetris-container');
+  const cRect = container.getBoundingClientRect();
+
+  // Width available is container inner width (minus borders ~8px)
+  const availableW = Math.max(0, Math.floor(cRect.width - 8));
+
+  // HUD elements that steal vertical space under the board
+  const hudIds = ['landing-preview','scoreboard','touch-controls'];
+  let hudH = 0;
+  for (const id of hudIds) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const r = el.getBoundingClientRect();
+    // Only count it if it’s inside the container and visible
+    const visible = el.offsetParent !== null;
+    if (visible && r.height) hudH += Math.ceil(r.height);
+  }
+
+  // Container height (minus borders ~8px), minus HUD below the canvas
+  // Fallback: if container has no explicit height, use visual viewport height from its top
+  let availableH = Math.floor(cRect.height - hudH - 8);
+  if (availableH <= 0) {
+    const topFromViewport = Math.max(0, Math.floor(cRect.top));
+    const vh = Math.floor(vv?.height ?? window.innerHeight);
+    availableH = Math.max(0, vh - topFromViewport - hudH - 8);
+  }
+
+  // Maintain 10:20 aspect ratio by picking the limiting dimension
+  const cellSize = Math.floor(Math.min(availableW / COLS, availableH / ROWS));
+
+  // Guardrails for tiny devices
+  blockSize = Math.max(8, Math.min(64, cellSize || 8));
+
+  // Set the true drawing resolution (prevents blur)
   canvas.width  = blockSize * COLS;
   canvas.height = blockSize * ROWS;
 
-  canvas.style.width = `${canvas.width}px`;
+  // Match CSS box to pixel buffer 1:1
+  canvas.style.width  = `${canvas.width}px`;
   canvas.style.height = `${canvas.height}px`;
 
-  // Preview box stays small but readable
+  // Keep preview responsive but small
   if (previewBox) {
     const size = Math.min(Math.floor(vw * 0.18), 150);
     previewBox.width = size; previewBox.height = size;
