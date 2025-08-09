@@ -393,3 +393,20 @@ html, body {
   }
 }
 
+
+#fullscreen-toggle {
+  background: #0ff;
+  color: #000;
+  font-family: 'Press Start 2P', monospace;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-left: 10px;
+  cursor: pointer;
+  box-shadow: 0 0 10px #0ff;
+  transition: background 0.2s ease;
+  position: relative;
+  z-index: 10000;
+}
+#fullscreen-toggle:hover { background: #00aaff; }
+:fullscreen #fullscreen-toggle { background: #0fa; }

@@ -133,6 +133,7 @@
   <audio id="tetris-sound" src="assets/tepris!.mp3" preload="auto"></audio>
   <div id="arcade-shell">
     <button id="tetris-toggle">🪙</button>
+    <button id="fullscreen-toggle" title="Fullscreen">⛶</button>
     <div id="insert-coin" style="position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-family:'Press Start 2P', monospace;font-size:20px;color:#0f0;text-shadow:0 0 3px #0f0;display:none;z-index:9998;">INSERT COIN</div>
     <div id="tetris-wrapper">
       <canvas id="preview-box"></canvas>
@@ -191,20 +192,30 @@
 
   function sizeCanvas() {
     if (!canvas) return;
-    // 10x20: width = height/2
     const W = window.innerWidth;
     const H = window.innerHeight;
-    const pad = Math.max(8, Math.min(24, Math.floor(Math.min(W,H) * 0.02))); // small padding
+    const isLandscape = W > H;
 
-    const maxH = H - pad*2;
-    const widthFromH = Math.floor(maxH / 2);
-    const maxW = Math.floor((W - pad*2) * 0.96);
-    const targetW = Math.max(200, Math.min(widthFromH, maxW));
+    // Minimal padding to avoid clipping glow borders
+    const pad = Math.max(6, Math.min(20, Math.floor(Math.min(W,H) * 0.015)));
 
-    canvas.style.width = targetW + 'px';
-    canvas.style.height = Math.floor(targetW * 2) + 'px';
+    if (isLandscape) {
+      // Landscape: fit by width first, but don't exceed height
+      const maxW = Math.floor((W - pad*2));          // full width
+      const widthFromH = Math.floor((H - pad*2) / 2); // 10:20 => w = h/2
+      const targetW = Math.max(200, Math.min(maxW, widthFromH));
+      canvas.style.width = targetW + 'px';
+      canvas.style.height = Math.floor(targetW * 2) + 'px';
+    } else {
+      // Portrait: fit by height first
+      const maxH = H - pad*2;
+      const widthFromH = Math.floor(maxH / 2);
+      const maxW = Math.floor((W - pad*2) * 0.98);
+      const targetW = Math.max(180, Math.min(widthFromH, maxW));
+      canvas.style.width = targetW + 'px';
+      canvas.style.height = Math.floor(targetW * 2) + 'px';
+    }
   }
-
   function onResize() {
     setVHVar();
     sizeCanvas();
@@ -216,6 +227,42 @@
 
   // Initial
   onResize();
+})();
+</script>
+
+
+<script id="fullscreen-handler">
+(function(){
+  const btn = document.getElementById('fullscreen-toggle');
+  const shell = document.getElementById('arcade-shell');
+  if (!btn || !shell) return;
+
+  async function enterFS() {
+    try {
+      if (shell.requestFullscreen) await shell.requestFullscreen();
+      else if (shell.webkitRequestFullscreen) await shell.webkitRequestFullscreen();
+      if (screen.orientation && screen.orientation.lock) {
+        // Try to keep landscape gameplay if device is rotated; ignore errors
+        try { await screen.orientation.lock('landscape'); } catch {}
+      }
+    } catch (e) { console.warn('Fullscreen failed', e); }
+  }
+  async function exitFS() {
+    try {
+      if (document.exitFullscreen) await document.exitFullscreen();
+      else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+    } catch (e) { console.warn('Exit FS failed', e); }
+  }
+  function isFS() {
+    return document.fullscreenElement || document.webkitFullscreenElement;
+  }
+  function toggleFS() {
+    if (isFS()) exitFS(); else enterFS();
+    // Slight delay to let viewport settle, then resize canvas
+    setTimeout(()=>window.dispatchEvent(new Event('resize')), 120);
+  }
+  btn.addEventListener('click', toggleFS);
+  document.addEventListener('fullscreenchange', ()=> setTimeout(()=>window.dispatchEvent(new Event('resize')), 60));
 })();
 </script>
 
