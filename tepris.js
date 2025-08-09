@@ -778,7 +778,7 @@ resizeCanvas = function() {
     // Remaining width after placing board and borders/gaps
     let remainingW = vw - boardWidth - totalMargin - gap;
     // Clamp panel width
-    let panelW = Math.max(minPanel, Math.min(maxPanel, Math.floor(remainingW / 2)));
+    let panelW = Math.max(minPanel, Math.min(maxPanel, remainingW));
     infoPanel.style.width = `${panelW}px`;
     infoPanel.style.height = `${boardHeight}px`;
   } else {
