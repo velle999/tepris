@@ -84,11 +84,19 @@
   /* Stronger landscape rules to avoid "half on screen" on some Android/Chrome combos */
   @media (orientation: landscape) {
     html, body { height: 100svh !important; width: 100svw !important; }
-    #arcade-shell { position: fixed !important; inset: 0 !important; min-height: 100svh !important; width: 100svw !important; }
+    #arcade-shell { position: relative !important; }
     #tetris-wrapper { position: relative !important; height: 100svh !important; width: 100svw !important; }
     #game-area { gap: 8px !important; padding: 0 6px !important; }
     /* Fit canvas height-first in landscape; 10x20 => width = height/2 */
     #tetris { width: min(88svw, calc(94svh / 2)) !important; max-height: 94svh !important; }
+  }
+
+  /* Desktop: relax overrides to avoid cutting bottom */
+  @media (min-width: 900px) and (min-height: 600px) {
+    html, body { height: auto !important; width: 100% !important; }
+    #arcade-shell { position: relative !important; inset: auto !important; min-height: 100vh !important; width: 100% !important; }
+    #tetris-wrapper { min-height: auto !important; }
+    #tetris { max-height: 86vh !important; width: auto !important; max-width: min(52vw, 46vh) !important; }
   }
 </style>
 
@@ -169,6 +177,48 @@
 </div>
   <!-- Main Game Logic -->
   <script src="tepris.js?v=rot2"></script>
+
+<script id="resize-backstop">
+(function() {
+  const canvas = document.getElementById('tetris');
+  const shell = document.getElementById('arcade-shell');
+  const wrapper = document.getElementById('tetris-wrapper');
+
+  function setVHVar() {
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', vh + 'px');
+  }
+
+  function sizeCanvas() {
+    if (!canvas) return;
+    // 10x20: width = height/2
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const pad = Math.max(8, Math.min(24, Math.floor(Math.min(W,H) * 0.02))); // small padding
+
+    const maxH = H - pad*2;
+    const widthFromH = Math.floor(maxH / 2);
+    const maxW = Math.floor((W - pad*2) * 0.96);
+    const targetW = Math.max(200, Math.min(widthFromH, maxW));
+
+    canvas.style.width = targetW + 'px';
+    canvas.style.height = Math.floor(targetW * 2) + 'px';
+  }
+
+  function onResize() {
+    setVHVar();
+    sizeCanvas();
+  }
+
+  window.addEventListener('resize', onResize, { passive: true });
+  window.addEventListener('orientationchange', () => setTimeout(onResize, 60), { passive: true });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(onResize, 60); });
+
+  // Initial
+  onResize();
+})();
+</script>
+
 </body>
 </html>
 

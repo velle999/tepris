@@ -1,3 +1,4 @@
+:root{--vh:1vh;}
 /* === Global Defaults === */
 html, body {
   margin: 0;
@@ -22,8 +23,8 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100svh;
-  width: 100svw;
+  min-height: calc(var(--vh, 1vh) * 100);
+  width: 100%;
   position: relative;
   overflow: hidden;
 }
@@ -60,10 +61,8 @@ html, body {
   align-items: center;
   justify-content: flex-start;
   background: #111;
-  width: 100svw;
-  height: 100svh;
-  min-height: 100svh;
-  min-width: 100svw;
+  width: 100%;
+  min-height: calc(var(--vh, 1vh) * 100);
   padding: 0;
   box-sizing: border-box;
   overflow: hidden;
@@ -106,19 +105,11 @@ html, body {
 #tetris {
   display: block;
   margin: 0 auto;
-  /* Keep native pixel crispness; CSS size only */
-  width: min(90svw, calc(82svh / 2));
-  height: auto;
   aspect-ratio: 10 / 20;
-  max-height: 75svh;
-  max-width: 100%;
-  background: rgba(0, 0, 0, 0.85);
-  border: 4px double #0ff;
+  height: auto;
   image-rendering: pixelated;
-  box-shadow: 0 0 10px #0f0, 0 0 40px #0ff;
-  /* Prevent resizing bugs on load/OS window resize */
-  min-width: 200px;
-  min-height: 400px;
+  max-width: 96vw;
+  max-height: 88vh;
 }
 
 /* === Preview Box === */
@@ -240,10 +231,14 @@ html, body {
   }
 
   #tetris {
-    max-height: 60svh;
-    min-width: 120px;
-    min-height: 200px;
-  }
+  display: block;
+  margin: 0 auto;
+  aspect-ratio: 10 / 20;
+  height: auto;
+  image-rendering: pixelated;
+  max-width: 96vw;
+  max-height: 88vh;
+}
 
   #preview-box {
     width: 22vw;
@@ -364,10 +359,14 @@ html, body {
 /* === Orientation-aware rules === */
 @media (orientation: landscape) {
   #tetris {
-    /* Fit height-first in landscape */
-    width: min(70svw, calc(86svh / 2));
-    max-height: 86svh;
-  }
+  display: block;
+  margin: 0 auto;
+  aspect-ratio: 10 / 20;
+  height: auto;
+  image-rendering: pixelated;
+  max-width: 96vw;
+  max-height: 88vh;
+}
   #tetris-container {
     max-width: 96svw;
     max-height: 96svh;
@@ -380,9 +379,14 @@ html, body {
 
 @media (orientation: portrait) {
   #tetris {
-    width: min(92svw, calc(80svh / 2));
-    max-height: 80svh;
-  }
+  display: block;
+  margin: 0 auto;
+  aspect-ratio: 10 / 20;
+  height: auto;
+  image-rendering: pixelated;
+  max-width: 96vw;
+  max-height: 88vh;
+}
   #tetris-container {
     max-width: 98svw;
     max-height: 98svh;
