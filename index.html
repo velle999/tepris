@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>TEPRIS Arcade 🎮</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=rot2" />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     body {
@@ -53,6 +53,35 @@
     }
     #initials-modal button:hover { background: #00aaff; }
   </style>
+
+<style id="rotation-fix">
+  html, body { height: 100svh !important; width: 100svw !important; overflow: hidden !important; }
+  #arcade-shell { min-height: 100svh !important; width: 100svw !important; overflow: hidden !important; }
+  #tetris-wrapper { width: 100svw !important; min-height: 100svh !important; }
+  #game-area { 
+    display: flex !important; 
+    flex-wrap: wrap !important; 
+    justify-content: center !important; 
+    align-items: flex-start !important; 
+    gap: 12px !important;
+    width: 100svw !important; 
+    max-width: 100svw !important; 
+    max-height: 100svh !important; 
+    overflow: hidden !important;
+  }
+  /* Canvas fit using aspect-ratio */
+  #tetris {
+    width: min(92svw, calc(82svh / 2)) !important;
+    height: auto !important;
+    aspect-ratio: 10 / 20 !important;
+    max-height: 82svh !important;
+    max-width: 100% !important;
+  }
+  @media (orientation: landscape) {
+    #tetris { width: min(72svw, calc(88svh / 2)) !important; max-height: 88svh !important; }
+  }
+</style>
+
 </head>
 <body>
   <div id="crt-flash"></div>
@@ -129,7 +158,7 @@
     style="margin-top:18px; font-size:1.2rem; background:#0ff; color:#000; border:none; border-radius:8px; padding:8px 30px;">OK</button>
 </div>
   <!-- Main Game Logic -->
-  <script src="tepris.js"></script>
+  <script src="tepris.js?v=rot2"></script>
 </body>
 </html>
 
