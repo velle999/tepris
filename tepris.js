@@ -809,6 +809,33 @@ document.addEventListener('DOMContentLoaded', () => {
       resetGamepadPolling();
     };
   });
+// === Fullscreen helper ===
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(err => {
+      console.warn(`Fullscreen request failed: ${err.message}`);
+    });
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+// Optional: make the "Insert Coin" button also toggle fullscreen
+document.getElementById('tetris-toggle')?.addEventListener('dblclick', toggleFullscreen);
+
+// === Update resizeCanvas to scale to the full window ===
+function resizeCanvas() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  // Maintain 10:20 ratio
+  const cellSize = Math.floor(Math.min(vw / COLS, vh / ROWS));
+  blockSize = Math.max(12, Math.min(64, cellSize));
+  canvas.width = blockSize * COLS;
+  canvas.height = blockSize * ROWS;
+  canvas.style.width = `${canvas.width}px`;
+  canvas.style.height = `${canvas.height}px`;
+  draw();
+}
 
   window.addEventListener('resize',()=>{ resizeCanvas(); resizePreviewBox(); });
   window.addEventListener('load', () => { resizeCanvas(); resizePreviewBox(); });
