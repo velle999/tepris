@@ -186,7 +186,7 @@
     const isLandscape = W > H;
 
     // In landscape, overlay controls if tight and reserve a budget so they don't cover rows
-    const overlay = isLandscape;
+    const overlay = false;
     const controlsBudget = overlay ? Math.ceil((cH_nat || 72) * 0.85) : cH_nat;
 
     const pad = Math.max(2, Math.min(12, Math.floor(Math.min(W,H) * 0.01)));
