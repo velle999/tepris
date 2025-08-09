@@ -198,48 +198,45 @@
     const rect = (shell || document.body).getBoundingClientRect();
     let W = Math.floor(rect.width);
     let H = Math.floor(rect.height);
-
-    // If rects fail (rare), fall back to window
     if (!W || !H) { W = window.innerWidth; H = window.innerHeight; }
 
-    const isLandscape = W > H;
-
-    // Measure header (preview) and footer (touch controls)
+    // Measure header/footer
     const headerEl = document.getElementById('preview-box');
     const footerEl = document.getElementById('touch-controls');
-    const headerH = headerEl ? Math.ceil(headerEl.getBoundingClientRect().height + 16) : 0;
-    let footerH = footerEl ? Math.ceil(footerEl.getBoundingClientRect().height + 12) : 0;
+    const headerH = headerEl ? Math.ceil(headerEl.getBoundingClientRect().height + 12) : 0;
+    let footerH = footerEl ? Math.ceil(footerEl.getBoundingClientRect().height + 8) : 0;
 
-    // Minimal padding so glow borders don't clip (smaller in tight views)
+    // Padding for glow/borders
     const pad = Math.max(4, Math.min(14, Math.floor(Math.min(W,H) * 0.012)));
 
-    // Available height within the shell AFTER header/footer
-    let availH = H - pad*2 - headerH - footerH;
+    // Available content box
+    const availW = Math.max(0, W - pad*2);
+    let availH = Math.max(0, H - pad*2 - headerH - footerH);
 
-    // If still tight, scale footer controls down to fit (down to 0.7x)
-    if (footerEl) {
-      if (availH < H * 0.55) {
-        const targetMin = Math.max(180, H * 0.52);
-        const needed = (headerH + footerH + pad*2 + (H*0.48)) - H;
-        const scale = Math.max(0.7, Math.min(1, 1 - (needed / Math.max(footerH, 1))));
-        footerEl.style.transformOrigin = 'bottom center';
-        footerEl.style.transform = `scale(${isFinite(scale)?scale:1})`;
-        const rect2 = footerEl.getBoundingClientRect();
-        footerH = Math.ceil(rect2.height + 10);
-        availH = H - pad*2 - headerH - footerH;
-      } else {
-        footerEl.style.transform = 'scale(1)';
-      }
+    // If tight, scale controls down to free space
+    if (footerEl && availH < H * 0.52) {
+      const scale = Math.max(0.7, Math.min(1, (H - pad*2 - headerH - 200) / Math.max(footerH, 1)));
+      footerEl.style.transformOrigin = 'bottom center';
+      footerEl.style.transform = `scale(${isFinite(scale)?scale:1})`;
+      const rect2 = footerEl.getBoundingClientRect();
+      footerH = Math.ceil(rect2.height + 6);
+      availH = Math.max(0, H - pad*2 - headerH - footerH);
+    } else if (footerEl) {
+      footerEl.style.transform = 'scale(1)';
     }
 
-    // Board width from available height (10:20 => w = h / 2)
-    const widthFromH = Math.floor(availH / 2);
-    const maxW = Math.floor(W - pad*2);
-    const targetW = Math.max(200, Math.min(widthFromH, maxW));
+    // --- KEY FIX ---
+    // Compute an integer cell size that fits BOTH dimensions: 10 cols, 20 rows.
+    const cellFromH = Math.floor(availH / 20);
+    const cellFromW = Math.floor(availW / 10);
+    const cell = Math.max(8, Math.min(cellFromH, cellFromW)); // min cell size safety
+
+    const targetW = cell * 10;
+    const targetH = cell * 20;
 
     canvas.style.width = targetW + 'px';
-    canvas.style.height = Math.floor(targetW * 2) + 'px';
-  }
+    canvas.style.height = targetH + 'px';
+}
   function onResize() {
     setVHVar();
     sizeCanvas();
