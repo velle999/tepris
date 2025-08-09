@@ -2,10 +2,10 @@
 html, body {
   margin: 0;
   padding: 0;
-  height: 100vh;
-  width: 100vw;
-  min-height: 100vh;
-  min-width: 100vw;
+  height: 100svh;
+  width: 100svw;
+  min-height: 100svh;
+  min-width: 100svw;
   background: linear-gradient(135deg, #1a1a1a, #000000);
   font-family: 'Courier New', monospace;
   color: #eee;
@@ -13,6 +13,7 @@ html, body {
   touch-action: none;
   overscroll-behavior: none;
   /* REMOVE position: fixed & display:flex here! Let the wrapper do layout. */
+  overflow: hidden;
 }
 
 /* === Arcade Shell === */
@@ -21,8 +22,8 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  width: 100vw;
+  min-height: 100svh;
+  width: 100svw;
   position: relative;
   overflow: hidden;
 }
@@ -59,10 +60,10 @@ html, body {
   align-items: center;
   justify-content: flex-start;
   background: #111;
-  width: 100vw;
-  height: 100vh;
-  min-height: 100vh;
-  min-width: 100vw;
+  width: 100svw;
+  height: 100svh;
+  min-height: 100svh;
+  min-width: 100svw;
   padding: 0;
   box-sizing: border-box;
   overflow: hidden;
@@ -75,10 +76,10 @@ html, body {
   flex-wrap: wrap;
   justify-content: center;
   align-items: flex-start;
-  width: 100vw;
-  max-width: 100vw;
+  width: 100svw;
+  max-width: 100svw;
   flex: 1;
-  max-height: 100vh;
+  max-height: 100svh;
   overflow: hidden;
   box-sizing: border-box;
   padding: 0;
@@ -87,8 +88,8 @@ html, body {
 /* === Canvas & Container === */
 #tetris-container {
   width: 100%;
-  max-width: 90vw;
-  max-height: 90vh;
+  max-width: 90svw;
+  max-height: 90svh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -105,10 +106,11 @@ html, body {
 #tetris {
   display: block;
   margin: 0 auto;
-  width: 100%;
+  /* Keep native pixel crispness; CSS size only */
+  width: min(90svw, calc(82svh / 2));
   height: auto;
   aspect-ratio: 10 / 20;
-  max-height: 65vh;
+  max-height: 75svh;
   max-width: 100%;
   background: rgba(0, 0, 0, 0.85);
   border: 4px double #0ff;
@@ -191,8 +193,8 @@ html, body {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100svw;
+  height: 100svh;
   background: white;
   opacity: 0;
   z-index: 9999;
@@ -233,12 +235,12 @@ html, body {
 /* === Responsive Tweaks === */
 @media (max-width: 600px) {
   #tetris-container {
-    max-width: 98vw;
-    max-height: 99vh;
+    max-width: 98svw;
+    max-height: 99svh;
   }
 
   #tetris {
-    max-height: 60vh;
+    max-height: 60svh;
     min-width: 120px;
     min-height: 200px;
   }
@@ -267,8 +269,8 @@ html, body {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100svw;
+  height: 100svh;
   z-index: -9999;
   background: linear-gradient(270deg, #0f0c29, #302b63, #24243e);
   background-size: 800% 800%;
@@ -358,3 +360,32 @@ html, body {
   border-top: 2px solid #088;
   margin: 12px 0 15px 0;
 }
+
+/* === Orientation-aware rules === */
+@media (orientation: landscape) {
+  #tetris {
+    /* Fit height-first in landscape */
+    width: min(70svw, calc(86svh / 2));
+    max-height: 86svh;
+  }
+  #tetris-container {
+    max-width: 96svw;
+    max-height: 96svh;
+  }
+  #touch-controls {
+    max-width: 420px;
+    gap: 8px;
+  }
+}
+
+@media (orientation: portrait) {
+  #tetris {
+    width: min(92svw, calc(80svh / 2));
+    max-height: 80svh;
+  }
+  #tetris-container {
+    max-width: 98svw;
+    max-height: 98svh;
+  }
+}
+

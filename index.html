@@ -132,3 +132,60 @@
   <script src="tepris.js"></script>
 </body>
 </html>
+
+  <script>
+    (function() {
+      const wrapper = document.getElementById('tetris-wrapper');
+      const canvas = document.getElementById('tetris');
+      const shell = document.getElementById('arcade-shell');
+
+      function applyOrientationClass() {
+        const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+        document.body.classList.toggle('landscape', !!isLandscape);
+      }
+
+      function syncHeights() {
+        // Use JS as a backstop in case svh isn't supported
+        const h = window.innerHeight;
+        const w = window.innerWidth;
+        if (wrapper) {
+          wrapper.style.height = h + 'px';
+          wrapper.style.width = w + 'px';
+        }
+        if (shell) {
+          shell.style.minHeight = h + 'px';
+          shell.style.width = w + 'px';
+        }
+        // Maintain scroll at top so mobile chrome UI doesn't shove layout
+        window.scrollTo(0, 0);
+      }
+
+      function fitCanvas() {
+        // Keep CSS aspect-ratio; we only nudge CSS width on extreme cases
+        const h = window.innerHeight;
+        const w = window.innerWidth;
+        // Desired width based on height (10:20 -> width = height / 2)
+        const widthFromHeight = Math.floor(h / 2);
+        const targetWidth = Math.min(Math.floor(w * 0.9), Math.floor(widthFromHeight * 0.94));
+        if (canvas) {
+          canvas.style.maxWidth = Math.max(200, targetWidth) + 'px';
+        }
+      }
+
+      function onResize() {
+        applyOrientationClass();
+        syncHeights();
+        fitCanvas();
+      }
+
+      // iOS sometimes fires resize before painting on rotation; delay a tick
+      window.addEventListener('orientationchange', () => setTimeout(onResize, 60));
+      window.addEventListener('resize', onResize);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) setTimeout(onResize, 60);
+      });
+
+      // Initial
+      onResize();
+    })();
+  </script>
