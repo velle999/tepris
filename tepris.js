@@ -644,38 +644,66 @@ function showGame() {
 function resizeCanvas() {
   if (!canvas) return;
   const infoPanel = document.getElementById('info-panel');
-  let infoWidth = 0;
-  let infoHeight = 0;
-  if (infoPanel) {
-    const rect = infoPanel.getBoundingClientRect();
-    infoWidth = rect.width;
-    infoHeight = rect.height;
-  }
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  let boardWidth, boardHeight;
-  // Decide layout: if screen is wider than tall and panel occupies less than half width, place panel to side
-  if (vw > vh && infoWidth < vw * 0.5) {
-    boardWidth = vw - infoWidth;
-    boardHeight = vh;
-  } else {
-    // Stack panel below board on narrow screens
-    boardWidth = vw;
-    boardHeight = Math.max(0, vh - infoHeight);
+
+  // Measure the info panel if present. Its size may change based on CSS.
+  let infoRect = null;
+  if (infoPanel) {
+    infoRect = infoPanel.getBoundingClientRect();
   }
+
+  // Determine candidate sizes for side-by-side and stacked layouts.
+  const gap = 12; // approximate gap between containers from CSS
+  const sideInfoWidth = infoRect ? infoRect.width : 0;
+  const sideBoardWidth = Math.max(0, vw - sideInfoWidth - gap);
+  const sideBoardHeight = vh;
+  const sideCell = Math.floor(Math.min(sideBoardWidth / COLS, sideBoardHeight / ROWS));
+
+  const infoHeight = infoRect ? infoRect.height : 0;
+  const stackedBoardWidth = vw;
+  const stackedBoardHeight = Math.max(0, vh - infoHeight - gap);
+  const stackedCell = Math.floor(Math.min(stackedBoardWidth / COLS, stackedBoardHeight / ROWS));
+
+  // Choose the layout that provides the larger cell size while still leaving room for the board.
+  let boardWidth, boardHeight;
+  if (sideCell >= stackedCell && sideBoardWidth > 0 && sideBoardHeight > 0) {
+    boardWidth = sideBoardWidth;
+    boardHeight = sideBoardHeight;
+    // Ensure the info panel retains its CSS-driven width for side layout.
+    if (infoPanel) {
+      infoPanel.style.width = '';
+    }
+  } else {
+    boardWidth = stackedBoardWidth;
+    boardHeight = stackedBoardHeight;
+    // When the panel wraps below the board, make it full width.
+    if (infoPanel) {
+      infoPanel.style.width = '100%';
+    }
+  }
+
   const cellSize = Math.floor(Math.min(boardWidth / COLS, boardHeight / ROWS));
   blockSize = Math.max(8, Math.min(64, cellSize || 8));
   canvas.width  = blockSize * COLS;
   canvas.height = blockSize * ROWS;
   canvas.style.width  = `${canvas.width}px`;
   canvas.style.height = `${canvas.height}px`;
+
+  // Ensure the playfield container matches the canvas size.
+  const container = document.getElementById('tetris-container');
+  if (container) {
+    container.style.width = `${canvas.width}px`;
+    container.style.height = `${canvas.height}px`;
+  }
+
   draw();
 }
 function resizePreviewBox() {
   if (!previewBox) return;
   const infoPanel = document.getElementById('info-panel');
-  let size;
   const maxSize = 150;
+  let size;
   if (infoPanel) {
     const rect = infoPanel.getBoundingClientRect();
     size = Math.min(rect.width, maxSize);
@@ -844,6 +872,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   window.addEventListener('resize',()=>{ resizeCanvas(); resizePreviewBox(); });
+  // Handle device orientation changes separately since some mobile browsers delay resize events
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => {
+      resizeCanvas();
+      resizePreviewBox();
+    }, 50);
+  });
   window.addEventListener('load', () => { resizeCanvas(); resizePreviewBox(); });
 
   // --- START THE GAMEPAD LOOP! ---
