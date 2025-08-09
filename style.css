@@ -52,6 +52,28 @@ html, body {
   box-shadow: 0 0 16px #0ff;
 }
 
+/* === Fullscreen Button === */
+#fullscreen-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 1.4rem;
+  padding: 4px 8px;
+  background: #00ffff;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 5001;
+  box-shadow: 0 0 10px #0ff;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+#fullscreen-btn:hover {
+  background: #00aaff;
+  box-shadow: 0 0 12px #00aaff;
+}
+
 /* === Game Wrapper === */
 #tetris-wrapper {
   display: none;
@@ -70,10 +92,9 @@ html, body {
 
 /* === Layout === */
 #game-area {
-  /* Arrange the playfield and info panel side-by-side when space permits and wrap on small widths. */
   display: flex;
-  flex-wrap: wrap;
   gap: 12px;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: flex-start;
   width: 100vw;
@@ -87,11 +108,9 @@ html, body {
 
 /* === Canvas & Container === */
 #tetris-container {
-  /* The playfield container holds only the canvas and its landing preview. Allow JS to size its width. */
-  flex: 0 1 auto;
-  width: auto;
-  max-width: 100%;
-  max-height: 100vh;
+  width: 100%;
+  max-width: 90vw;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -107,38 +126,32 @@ html, body {
 /* ======= CRITICAL: Fixes for canvas stretching/auto-sizing issues ======= */
 #tetris {
   display: block;
-  margin: 0;
-  /* The canvas size is controlled by JavaScript; avoid CSS constraints that conflict with JS sizing. */
+  margin: 0 auto;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 10 / 20;
+  max-height: 65vh;
+  max-width: 100%;
   background: rgba(0, 0, 0, 0.85);
   border: 4px double #0ff;
   image-rendering: pixelated;
   box-shadow: 0 0 10px #0f0, 0 0 40px #0ff;
+  /* Prevent resizing bugs on load/OS window resize */
+  min-width: 200px;
+  min-height: 400px;
 }
 
 /* === Preview Box === */
 #preview-box {
-  /* The preview box will be sized dynamically by JavaScript based on the info panel width. */
+  width: 16vw;
+  height: 16vw;
+  max-width: 90px;
+  max-height: 90px;
+  aspect-ratio: 1 / 1;
   border: 2px dashed #0ff;
   margin-bottom: 6px;
   background: rgba(0, 0, 0, 0.5);
   image-rendering: pixelated;
-}
-
-/* === Info Panel === */
-#info-panel {
-  /* Side column containing preview box, scoreboard, and touch controls. */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  /* The panel should be narrow on desktop but can grow when wrapped on mobile. */
-  flex: 0 1 auto;
-  width: auto;
-  min-width: 160px;
-  max-width: 240px;
-  box-sizing: border-box;
-  overflow: visible;
 }
 
 /* === Scoreboard === */
@@ -247,11 +260,16 @@ html, body {
   }
 
   #tetris {
-    /* Let JavaScript control the canvas size on small screens. Remove max/min constraints. */
+    max-height: 60vh;
+    min-width: 120px;
+    min-height: 200px;
   }
 
   #preview-box {
-    /* Preview box sizing is handled via JavaScript; avoid overriding here. */
+    width: 22vw;
+    height: 22vw;
+    max-width: 75px;
+    max-height: 75px;
     margin-bottom: 4px;
   }
 
@@ -263,20 +281,6 @@ html, body {
 
   #game-area {
     gap: 8px;
-  }
-}
-
-/* Landscape-specific adjustments for small screens (e.g. mobile landscape) */
-@media (orientation: landscape) and (max-height: 520px) {
-  #info-panel {
-    max-width: 160px;
-  }
-  #scoreboard {
-    font-size: 0.9rem;
-  }
-  #touch-controls button {
-    font-size: 1.6rem;
-    padding: 10px;
   }
 }
 

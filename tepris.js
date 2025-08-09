@@ -47,6 +47,30 @@ let gamepadPollActive = false;
 let rgbMode = false;
 let isFlashing = false;
 
+// ========== Fullscreen Control ==========
+/**
+ * Toggle the browser's fullscreen mode. If not currently in fullscreen,
+ * request fullscreen on the root document element. If already in fullscreen,
+ * exit fullscreen. Errors are silently ignored since some browsers may
+ * reject fullscreen requests (e.g. if not triggered by user gesture).
+ */
+function toggleFullscreen() {
+  try {
+    if (!document.fullscreenElement) {
+      const root = document.documentElement;
+      if (root && root.requestFullscreen) {
+        root.requestFullscreen().catch(() => {});
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  } catch (err) {
+    // Ignore any exceptions thrown by the Fullscreen API.
+  }
+}
+
 // ========== Utility & Rendering ==========
 
 function getRGBColor(t) {
@@ -642,78 +666,17 @@ function showGame() {
   setTimeout(() => { resizeCanvas(); resizePreviewBox(); }, 0);
 }
 function resizeCanvas() {
-  if (!canvas) return;
-  const infoPanel = document.getElementById('info-panel');
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-
-  // Measure the info panel if present. Its size may change based on CSS.
-  let infoRect = null;
-  if (infoPanel) {
-    infoRect = infoPanel.getBoundingClientRect();
-  }
-
-  // Determine candidate sizes for side-by-side and stacked layouts.
-  const gap = 12; // approximate gap between containers from CSS
-  const sideInfoWidth = infoRect ? infoRect.width : 0;
-  const sideBoardWidth = Math.max(0, vw - sideInfoWidth - gap);
-  const sideBoardHeight = vh;
-  const sideCell = Math.floor(Math.min(sideBoardWidth / COLS, sideBoardHeight / ROWS));
-
-  const infoHeight = infoRect ? infoRect.height : 0;
-  const stackedBoardWidth = vw;
-  const stackedBoardHeight = Math.max(0, vh - infoHeight - gap);
-  const stackedCell = Math.floor(Math.min(stackedBoardWidth / COLS, stackedBoardHeight / ROWS));
-
-  // Choose the layout that provides the larger cell size while still leaving room for the board.
-  let boardWidth, boardHeight;
-  if (sideCell >= stackedCell && sideBoardWidth > 0 && sideBoardHeight > 0) {
-    boardWidth = sideBoardWidth;
-    boardHeight = sideBoardHeight;
-    // Ensure the info panel retains its CSS-driven width for side layout.
-    if (infoPanel) {
-      infoPanel.style.width = '';
-    }
-  } else {
-    boardWidth = stackedBoardWidth;
-    boardHeight = stackedBoardHeight;
-    // When the panel wraps below the board, make it full width.
-    if (infoPanel) {
-      infoPanel.style.width = '100%';
-    }
-  }
-
-  const cellSize = Math.floor(Math.min(boardWidth / COLS, boardHeight / ROWS));
-  blockSize = Math.max(8, Math.min(64, cellSize || 8));
-  canvas.width  = blockSize * COLS;
-  canvas.height = blockSize * ROWS;
-  canvas.style.width  = `${canvas.width}px`;
-  canvas.style.height = `${canvas.height}px`;
-
-  // Ensure the playfield container matches the canvas size.
-  const container = document.getElementById('tetris-container');
-  if (container) {
-    container.style.width = `${canvas.width}px`;
-    container.style.height = `${canvas.height}px`;
-  }
-
+  const container = document.getElementById('tetris-container') || document.body;
+  const vw = container.clientWidth, vh = window.innerHeight - 160;
+  blockSize = Math.max(12, Math.min(40, Math.floor(Math.min(vw/COLS, vh/ROWS))));
+  canvas.width = blockSize*COLS; canvas.height = blockSize*ROWS;
+  canvas.style.width = `${canvas.width}px`; canvas.style.height = `${canvas.height}px`;
   draw();
 }
 function resizePreviewBox() {
-  if (!previewBox) return;
-  const infoPanel = document.getElementById('info-panel');
-  const maxSize = 150;
-  let size;
-  if (infoPanel) {
-    const rect = infoPanel.getBoundingClientRect();
-    size = Math.min(rect.width, maxSize);
-  } else {
-    size = Math.min(window.innerWidth * 0.2, maxSize);
-  }
-  previewBox.width  = size;
-  previewBox.height = size;
-  previewBox.style.width  = `${size}px`;
-  previewBox.style.height = `${size}px`;
+  const size = Math.min(window.innerWidth * 0.2, 150);
+  previewBox.width = size; previewBox.height = size;
+  previewBox.style.width = `${size}px`; previewBox.style.height = `${size}px`;
 }
 function highlightOverlayMenuItem() {
   overlayMenuItems.forEach((btn, idx) => {
@@ -870,15 +833,11 @@ document.addEventListener('DOMContentLoaded', () => {
       resetGamepadPolling();
     };
   });
+  // Bind the fullscreen toggle button after the boot sequence finishes.
+  const fsBtn = document.getElementById('fullscreen-btn');
+  fsBtn?.addEventListener('click', toggleFullscreen);
 
   window.addEventListener('resize',()=>{ resizeCanvas(); resizePreviewBox(); });
-  // Handle device orientation changes separately since some mobile browsers delay resize events
-  window.addEventListener('orientationchange', () => {
-    setTimeout(() => {
-      resizeCanvas();
-      resizePreviewBox();
-    }, 50);
-  });
   window.addEventListener('load', () => { resizeCanvas(); resizePreviewBox(); });
 
   // --- START THE GAMEPAD LOOP! ---
