@@ -239,9 +239,6 @@ function resetPiece() {
     return;
   }
 }
-resizeCanvas();
-resizePreviewBox();
-
 function drop() {
   if (!running || paused || overlayMenuActive || isFlashing) return;
   pos.y++;
@@ -491,7 +488,6 @@ function pollGamepad() {
 
 // ========== Touch Controls (NEW & BUG-FREE) ==========
 
-// -- IDs of on-screen touch buttons --
 const TOUCH_BTN_IDS = [
   'left-btn', 'right-btn', 'down-btn',
   'rotate-btn', 'harddrop-btn', 'hold-btn'
@@ -614,8 +610,16 @@ function setPauseState(state) {
   if (!state && running) requestAnimationFrame(update);
 }
 function showPauseMenu() {
-  resizeCanvas(); // <-- forces playfield to fit before showing pause menu
-  document.getElementById('pause-menu').style.display = 'block';
+  // Fit canvas for current viewport first
+  scheduleResizeNow();
+  const menu = document.getElementById('pause-menu');
+  if (menu) {
+    const { vw, vh } = getViewport();
+    menu.style.display = 'block';
+    menu.style.width = Math.min(500, Math.floor(vw * 0.9)) + 'px';
+    menu.style.maxHeight = Math.floor(vh * 0.9) + 'px';
+    menu.style.overflowY = 'auto';
+  }
   overlayMenuActive = true;
   overlayMenuItems = PAUSE_MENU_ITEMS.map(id => document.getElementById(id));
   overlayMenuIndex = 0;
@@ -643,33 +647,8 @@ function hideGameOverMenu() {
 function showGame() {
   const wrapper = document.getElementById('tetris-wrapper');
   if (wrapper) wrapper.style.display = 'flex';
-  setTimeout(() => { resizeCanvas(); resizePreviewBox(); }, 0);
-}
-function resizeCanvas() {
-  // Use full viewport, not just the container
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-
-  // Maintain 10:20 ratio
-  const cellSize = Math.floor(Math.min(vw / COLS, vh / ROWS));
-
-  // Allow slightly smaller blocks if needed for tiny screens
-  blockSize = Math.max(8, cellSize);
-
-  canvas.width = blockSize * COLS;
-  canvas.height = blockSize * ROWS;
-
-  // Scale canvas visually
-  canvas.style.width = `${canvas.width}px`;
-  canvas.style.height = `${canvas.height}px`;
-
-  draw();
-}
-
-function resizePreviewBox() {
-  const size = Math.min(window.innerWidth * 0.2, 150);
-  previewBox.width = size; previewBox.height = size;
-  previewBox.style.width = `${size}px`; previewBox.style.height = `${size}px`;
+  // Let layout paint, then size everything
+  setTimeout(scheduleResizeNow, 0);
 }
 function highlightOverlayMenuItem() {
   overlayMenuItems.forEach((btn, idx) => {
@@ -678,6 +657,62 @@ function highlightOverlayMenuItem() {
       if (idx === overlayMenuIndex) btn.focus();
     }
   });
+}
+
+// ========== Viewport / Resize / Fullscreen ==========
+
+function getViewport() {
+  // Use visualViewport where possible to account for mobile browser UI
+  const vv = window.visualViewport;
+  const vw = Math.floor((vv?.width ?? window.innerWidth));
+  const vh = Math.floor((vv?.height ?? window.innerHeight));
+  return { vw, vh };
+}
+
+function resizeCanvas() {
+  if (!canvas) return;
+  const { vw, vh } = getViewport();
+
+  // Maintain 10:20 aspect
+  const cellSize = Math.floor(Math.min(vw / COLS, vh / ROWS));
+  blockSize = Math.max(8, Math.min(64, cellSize));
+
+  canvas.width  = blockSize * COLS;
+  canvas.height = blockSize * ROWS;
+
+  canvas.style.width = `${canvas.width}px`;
+  canvas.style.height = `${canvas.height}px`;
+
+  // Preview box stays small but readable
+  if (previewBox) {
+    const size = Math.min(Math.floor(vw * 0.18), 150);
+    previewBox.width = size; previewBox.height = size;
+    previewBox.style.width = `${size}px`;
+    previewBox.style.height = `${size}px`;
+  }
+
+  draw();
+}
+
+// Debounced/settled resize for mobile rotations & fullscreen
+let _resizeTimer = null;
+function scheduleResizeNow(delay = 0) {
+  if (_resizeTimer) clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
+    resizeCanvas();
+    _resizeTimer = null;
+  }, delay);
+}
+
+// Fullscreen helper (double-click coin button also toggles)
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen?.().catch(err => {
+      console.warn(`Fullscreen request failed: ${err?.message || err}`);
+    });
+  } else {
+    document.exitFullscreen?.();
+  }
 }
 
 // ========== Main Game Loop ==========
@@ -792,7 +827,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Boot sequence and start game
   fakeBootSequence(()=>{
-    document.getElementById('tetris-toggle')?.addEventListener('click', () => {
+    const coinBtn = document.getElementById('tetris-toggle');
+    coinBtn?.addEventListener('click', () => {
       window.startTetris();
       if (bgMusic) {
         currentTrackIndex = Math.floor(Math.random() * bgTracks.length);
@@ -801,6 +837,9 @@ document.addEventListener('DOMContentLoaded', () => {
         playSafe(bgMusic);
       }
     });
+    // Optional fullscreen on double-tap coin
+    coinBtn?.addEventListener('dblclick', toggleFullscreen);
+
     window.startTetris = function() {
       if (window.__teprisStarted) return;
       window.__teprisStarted = true;
@@ -824,48 +863,22 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('insert-coin')?.style.setProperty('display', 'none');
       document.getElementById('tetris-toggle')?.style.setProperty('display', 'none');
       resetGamepadPolling();
+
+      // Ensure correct initial sizing even if not fullscreen
+      scheduleResizeNow(0);
+      // A follow-up resize once mobile UI settles
+      scheduleResizeNow(300);
     };
   });
-// === Fullscreen helper ===
-function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(err => {
-      console.warn(`Fullscreen request failed: ${err.message}`);
-    });
-  } else {
-    document.exitFullscreen();
-  }
-}
 
-// Optional: make the "Insert Coin" button also toggle fullscreen
-document.getElementById('tetris-toggle')?.addEventListener('dblclick', toggleFullscreen);
+  // Global resize/orientation/fullscreen events
+  window.addEventListener('resize', () => { scheduleResizeNow(50); });
+  window.addEventListener('orientationchange', () => { scheduleResizeNow(350); });
+  document.addEventListener('fullscreenchange', () => { scheduleResizeNow(50); });
 
-// === Update resizeCanvas to scale to the full window ===
-function resizeCanvas() {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  // Maintain 10:20 ratio
-  const cellSize = Math.floor(Math.min(vw / COLS, vh / ROWS));
-  blockSize = Math.max(12, Math.min(64, cellSize));
-  canvas.width = blockSize * COLS;
-  canvas.height = blockSize * ROWS;
-  canvas.style.width = `${canvas.width}px`;
-  canvas.style.height = `${canvas.height}px`;
-  draw();
-}
-
-  window.addEventListener('resize',()=>{ resizeCanvas(); resizePreviewBox(); });
-  window.addEventListener('load', () => { resizeCanvas(); resizePreviewBox(); });
-  window.addEventListener('orientationchange', () => {
-  setTimeout(() => {
-    resizeCanvas();
-    resizePreviewBox();
-  }, 200); // slight delay so mobile browser UI finishes animating
-});
-
-
-  // --- START THE GAMEPAD LOOP! ---
+  // Start the gamepad loop!
   startGamepadPolling();
 });
 
 // END OF FILE. Go touch grass. Or, if you’re reading this, maybe touch the hold button instead.
+
