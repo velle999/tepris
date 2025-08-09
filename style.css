@@ -55,23 +55,21 @@ html, body {
 /* === Fullscreen Button === */
 #fullscreen-btn {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: 12px;
+  right: 12px;
   font-size: 1.4rem;
-  padding: 4px 8px;
+  padding: 6px 10px;
   background: #00ffff;
   color: #000;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  z-index: 5001;
+  z-index: 6000;
   box-shadow: 0 0 10px #0ff;
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease;
 }
-
 #fullscreen-btn:hover {
   background: #00aaff;
-  box-shadow: 0 0 12px #00aaff;
 }
 
 /* === Game Wrapper === */
@@ -108,55 +106,39 @@ html, body {
 
 /* === Canvas & Container === */
 #tetris-container {
-  width: 100%;
-  max-width: 90vw;
-  max-height: 90vh;
+  /* Allow JS to set explicit width/height; do not force full width */
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  box-sizing: border-box;
+  box-sizing: content-box;
   padding: 0;
   border: 4px ridge #0ff;
   background: repeating-linear-gradient(0deg, #000, #000 2px, #111 2px, #111 4px);
   box-shadow: 0 0 20px #0ff inset;
-  margin: 0 auto;
+  margin: 0;
 }
 
 /* ======= CRITICAL: Fixes for canvas stretching/auto-sizing issues ======= */
 #tetris {
   display: block;
-  margin: 0 auto;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 10 / 20;
-  max-height: 65vh;
-  max-width: 100%;
   background: rgba(0, 0, 0, 0.85);
   border: 4px double #0ff;
   image-rendering: pixelated;
   box-shadow: 0 0 10px #0f0, 0 0 40px #0ff;
-  /* Prevent resizing bugs on load/OS window resize */
-  min-width: 200px;
-  min-height: 400px;
 }
 
 /* === Preview Box === */
 #preview-box {
-  width: 16vw;
-  height: 16vw;
-  max-width: 90px;
-  max-height: 90px;
-  aspect-ratio: 1 / 1;
   border: 2px dashed #0ff;
-  margin-bottom: 6px;
   background: rgba(0, 0, 0, 0.5);
   image-rendering: pixelated;
 }
 
 /* === Scoreboard === */
 #scoreboard {
-  margin-top: 6px;
+  margin: 0;
   font-size: 1rem;
   text-align: center;
   color: #00ffcc;
@@ -166,7 +148,7 @@ html, body {
   border-radius: 6px;
   text-shadow: 1px 1px 2px black;
   width: 100%;
-  max-width: 300px;
+  box-sizing: border-box;
 }
 
 #score, #level, #lines, #highScore {
@@ -180,10 +162,9 @@ html, body {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  margin-top: 10px;
   gap: 10px;
   width: 100%;
-  max-width: 360px;
+  box-sizing: border-box;
 }
 
 #touch-controls button {
@@ -379,4 +360,30 @@ html, body {
   border: none;
   border-top: 2px solid #088;
   margin: 12px 0 15px 0;
+}
+
+/* === Info Panel === */
+#info-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  flex: 0 0 auto;
+  /* limit width to a portion of viewport on wide screens */
+  max-width: 30vw;
+  /* ensure the panel doesn't shrink too small */
+  min-width: 160px;
+  width: auto;
+  box-sizing: border-box;
+}
+
+/* Make preview box expand to the width of the info panel */
+#info-panel #preview-box {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  max-width: 200px;
+  max-height: 200px;
+  margin: 0;
 }
