@@ -20,11 +20,11 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  min-height: calc(var(--vh, 1vh) * 100);
-  width: 100%;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100vw;
   position: relative;
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* === Insert Coin Button === */
@@ -57,75 +57,57 @@ html, body {
   display: none;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   background: #111;
-  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
   box-sizing: border-box;
-  /* Let the wrapper size naturally; scaling will fit it to viewport */
 }
 
 /* === Layout === */
 #game-area {
   display: flex;
+  flex-direction: row;
   gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
   align-items: flex-start;
-  width: 100vw;
-  max-width: 100vw;
-  flex: 1;
-  max-height: 100vh;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   box-sizing: border-box;
-  padding: 0;
 }
 
 /* === Canvas & Container === */
 #tetris-container {
-  width: 100%;
-  max-width: 90vw;
-  max-height: 90vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  box-sizing: border-box;
   padding: 0;
   border: 4px ridge #0ff;
   background: repeating-linear-gradient(0deg, #000, #000 2px, #111 2px, #111 4px);
   box-shadow: 0 0 20px #0ff inset;
-  margin: 0 auto;
+  box-sizing: content-box;
 }
 
-/* ======= CRITICAL: Fixes for canvas stretching/auto-sizing issues ======= */
+/* ======= The main Tetris canvas. Its size is controlled by JavaScript. ======= */
 #tetris {
   display: block;
-  margin: 0 auto;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 10 / 20;
-  max-height: 65vh;
-  max-width: 100%;
   background: rgba(0, 0, 0, 0.85);
   border: 4px double #0ff;
   image-rendering: pixelated;
   box-shadow: 0 0 10px #0f0, 0 0 40px #0ff;
-  /* Prevent resizing bugs on load/OS window resize */
-  min-width: 200px;
-  min-height: 400px;
 }
 
 /* === Preview Box === */
-#preview-box {
-  width: 16vw;
-  height: 16vw;
-  max-width: 90px;
-  max-height: 90px;
-  aspect-ratio: 1 / 1;
+/* The preview box inside the info panel will be sized by JavaScript. */
+#info-panel #preview-box {
+  display: block;
   border: 2px dashed #0ff;
-  margin-bottom: 6px;
   background: rgba(0, 0, 0, 0.5);
   image-rendering: pixelated;
+  margin-bottom: 6px;
 }
 
 /* === Scoreboard === */
@@ -140,7 +122,7 @@ html, body {
   border-radius: 6px;
   text-shadow: 1px 1px 2px black;
   width: 100%;
-  max-width: 300px;
+  box-sizing: border-box;
 }
 
 #score, #level, #lines, #highScore {
@@ -157,7 +139,7 @@ html, body {
   margin-top: 10px;
   gap: 10px;
   width: 100%;
-  max-width: 360px;
+  box-sizing: border-box;
 }
 
 #touch-controls button {
@@ -174,6 +156,39 @@ html, body {
 #touch-controls button:hover {
   background: #00ffff;
   color: #000;
+}
+
+/* === Info Panel === */
+#info-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* === Fullscreen Button === */
+#fullscreen-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 1.5rem;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #00ffff;
+  color: #000;
+  cursor: pointer;
+  box-shadow: 0 0 8px #0ff;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  z-index: 6000;
+}
+
+#fullscreen-btn:hover {
+  background: #00aaff;
+  box-shadow: 0 0 12px #00aaff;
 }
 
 /* === Overlay === */
@@ -354,141 +369,3 @@ html, body {
   border-top: 2px solid #088;
   margin: 12px 0 15px 0;
 }
-#fullscreen-toggle{position:fixed;top:10px;right:10px;z-index:10050;background:#0ff;color:#000;border:0;border-radius:8px;padding:10px 12px;font-family:'Press Start 2P', monospace;box-shadow:0 0 10px #0ff}
-
-@media (max-width: 900px) {
-  #fullscreen-toggle{position:fixed;top:10px;right:10px;z-index:10050;background:#0ff;color:#000;border:0;border-radius:8px;padding:10px 12px;font-family:'Press Start 2P', monospace;box-shadow:0 0 10px #0ff}
-}
-
-/* Landscape overlay for touch controls so board can use full vertical space */
-@media (orientation: landscape) {
-  body.ls-overlay #touch-controls {
-    position: fixed;
-    left: 50%;
-    bottom: 10px;
-    transform: translateX(-50%) scale(var(--controls-scale, 1));
-    transform-origin: bottom center;
-    z-index: 10020;
-    background: rgba(0,0,0,0.3);
-    padding: 6px 8px;
-    border-radius: 10px;
-    backdrop-filter: blur(2px);
-  }
-}
-
-
-/* === Mobile Landscape: 3-column layout === */
-@media (orientation: landscape) {
-  #tetris-container {
-    display: grid !important;
-    grid-template-columns: minmax(120px, 22svw) minmax(200px, 1fr) minmax(120px, 22svw);
-    grid-auto-rows: min-content;
-    align-items: start;
-    justify-items: center;
-    gap: 10px;
-    width: 100%;
-  }
-  /* Left column stack */
-  #preview-box { grid-column: 1; grid-row: 1; }
-  #scoreboard  { grid-column: 1; grid-row: 2; }
-  /* Center column: board */
-  #tetris      { grid-column: 2; grid-row: 1 / span 3; }
-  /* Right column: vertical buttons */
-  #touch-controls { 
-    grid-column: 3; grid-row: 1 / span 3;
-    position: static !important;
-    display: flex; flex-direction: column; gap: 10px;
-    transform: none !important;
-    background: transparent; padding: 0; border-radius: 0; backdrop-filter: none;
-    align-items: center; justify-content: flex-start;
-  }
-  /* Prevent buttons from stretching full width */
-  #touch-controls > button { width: auto; min-width: 44px; }
-  /* Keep fullscreen/coin visible and out of layout */
-  #fullscreen-toggle { position: fixed; top: 10px; right: 10px; z-index: 10050; }
-}
-
-
-
-/* === Mobile Landscape Tight Autofit Grid === */
-@media (orientation: landscape) and (max-width: 1024px) {
-  #tetris-container {
-    display: grid !important;
-    grid-template-columns: auto 1fr auto;
-    grid-template-rows: min-content min-content;
-    align-items: start;
-    justify-items: center;
-    gap: 4px;
-    width: 100%;
-  }
-  /* Preview top-left */
-  #preview-box { grid-column: 1; grid-row: 1; }
-  /* Scoreboard below preview */
-  #scoreboard  { grid-column: 1; grid-row: 2; }
-  /* Board centered column */
-  #tetris      { grid-column: 2; grid-row: 1 / span 2; }
-  /* Controls right column */
-  #touch-controls { 
-    grid-column: 3; grid-row: 1 / span 2;
-    position: static !important;
-    display: flex; flex-direction: column; gap: 6px;
-    transform: none !important;
-    background: transparent; padding: 0; border-radius: 0; backdrop-filter: none;
-    align-items: center; justify-content: flex-start;
-  }
-  #touch-controls > button { width: auto; min-width: 44px; }
-}
-
-
-
-/* === Mobile Landscape Autofit Grid === */
-@media (orientation: landscape) {
-  #tetris-container {
-    display: grid !important;
-    grid-template-columns: auto 1fr auto; /* left hugs, board flexes, right hugs */
-    grid-auto-rows: min-content;
-    gap: 6px;
-    align-items: start;
-    justify-items: center;
-    width: 100%;
-  }
-  #preview-box { grid-column: 1; grid-row: 1; }
-  #scoreboard  { grid-column: 1; grid-row: 2; }
-  #tetris      { grid-column: 2; grid-row: 1 / span 3; }
-  #touch-controls {
-    grid-column: 3; grid-row: 1 / span 3;
-    display: flex; flex-direction: column; gap: 6px;
-    position: static !important;
-    transform: none !important;
-    background: transparent; padding: 0; border-radius: 0; backdrop-filter: none;
-  }
-  #touch-controls > button { width: auto; min-width: 44px; }
-  #fullscreen-toggle { position: fixed; top: 10px; right: 10px; z-index: 10050; }
-}
-
-
-
-/* === Mobile Landscape: Tight 3-column autofit === */
-@media (orientation: landscape) {
-  #game-area {
-    display: grid !important;
-    grid-template-columns: auto 1fr auto;
-    align-items: start;
-    justify-items: center;
-    gap: 6px;
-    width: 100%;
-  }
-  #left-rail { grid-column: 1; display: grid; grid-template-rows: auto auto; gap: 6px; align-items: start; }
-  #tetris-container { 
-    grid-column: 2 / span 2;
-    display: grid !important;
-    grid-template-columns: 1fr auto; /* board | controls */
-    align-items: start;
-    justify-items: center;
-    gap: 6px;
-  }
-  #tetris { grid-column: 1; }
-  #touch-controls { grid-column: 2; display: flex; flex-direction: column; gap: 6px; }
-  #fullscreen-toggle { position: fixed; top: 10px; right: 10px; z-index: 10050; }
-}
-

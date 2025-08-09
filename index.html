@@ -86,19 +86,22 @@
   <audio id="tetris-sound" src="assets/tepris!.mp3" preload="auto"></audio>
   <div id="arcade-shell">
     <button id="tetris-toggle">🪙</button>
-    <button id="fullscreen-toggle" title="Fullscreen">⛶</button>
+    <!-- Fullscreen toggle button -->
+    <button id="fullscreen-btn" title="Toggle Fullscreen">⛶</button>
     <div id="insert-coin" style="position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-family:'Press Start 2P', monospace;font-size:20px;color:#0f0;text-shadow:0 0 3px #0f0;display:none;z-index:9998;">INSERT COIN</div>
     <div id="tetris-wrapper">
-      <div id="left-rail"><canvas id="preview-box"></canvas>
-
-          <div id="scoreboard">
-            <div>Score: <span id="score">0</span></div>
-</div>
       <div id="game-area">
+        <!-- Main game board -->
         <div id="tetris-container">
           <canvas id="tetris"></canvas>
           <div id="landing-preview"></div>
-            <div>High Score: <span id="highScore">---</span></div>
+        </div>
+        <!-- Info panel with preview, scoreboard and touch controls -->
+        <div id="info-panel">
+          <canvas id="preview-box"></canvas>
+          <div id="scoreboard">
+            <div>Score: <span id="score">0</span></div>
+            <div>High&nbsp;Score: <span id="highScore">---</span></div>
             <div>Level: <span id="level">0</span></div>
             <div>Lines: <span id="lines">0</span></div>
           </div>
@@ -133,167 +136,5 @@
 </div>
   <!-- Main Game Logic -->
   <script src="tepris.js"></script>
-
-<script id="landscape-emergency-fit">
-(function(){
-  const wrapper = document.getElementById('tetris-wrapper');
-  const container = document.getElementById('tetris-container');
-  function fitAll(){
-    if (!wrapper) return;
-    // Reset any previous scale to measure natural size
-    wrapper.style.transformOrigin = 'top center';
-    wrapper.style.transform = 'scale(1)';
-    // Prefer container if present for tighter measure
-    const target = container || wrapper;
-    const rect = target.getBoundingClientRect();
-    const W = window.innerWidth, H = window.innerHeight;
-    const pad = Math.max(2, Math.min(12, Math.floor(Math.min(W,H)*0.01)));
-    const availW = Math.max(0, W - pad*2);
-    const availH = Math.max(0, H - pad*2);
-    const sX = availW / Math.max(1, rect.width);
-    const sY = availH / Math.max(1, rect.height);
-    const s = Math.min(sX, sY, 1);
-    wrapper.style.transform = 'scale(' + s + ')';
-  }
-  window.addEventListener('resize', fitAll, {passive:true});
-  window.addEventListener('orientationchange', ()=> setTimeout(fitAll, 60), {passive:true});
-  document.addEventListener('visibilitychange', ()=> { if (!document.hidden) setTimeout(fitAll,60); });
-  fitAll();
-})();
-</script>
-
-
-<script id="fit-v1">
-(function(){
-  const canvas = document.getElementById('tetris');
-  const container = document.getElementById('tetris-container');
-  const header = document.getElementById('preview-box');
-  const controls = document.getElementById('touch-controls');
-  const fsBtn = document.getElementById('fullscreen-toggle');
-
-  function isFS(){ return document.fullscreenElement || document.webkitFullscreenElement; }
-  async function enterFS(){ try{ await (document.documentElement.requestFullscreen?.()||document.documentElement.webkitRequestFullscreen?.()); }catch(e){} }
-  async function exitFS(){ try{ await (document.exitFullscreen?.()||document.webkitExitFullscreen?.()); }catch(e){} }
-  function toggleFS(){ if(isFS()) exitFS(); else enterFS(); setTimeout(fit, 80); }
-  if (fsBtn) fsBtn.addEventListener('click', toggleFS);
-
-  $1
-    const canvas = document.getElementById('tetris');
-    const container = document.getElementById('tetris-container');
-    const preview = document.getElementById('preview-box');
-    const scoreboard = document.getElementById('scoreboard');
-    const controls = document.getElementById('touch-controls');
-    if (!canvas || !container) return;
-
-    const W = window.innerWidth;
-    const H = window.innerHeight;
-    const isLandscape = W > H;
-    const pad = Math.max(2, Math.min(12, Math.floor(Math.min(W,H)*0.01)));
-    const gap = 6;
-
-    // Reset transforms to measure natural sizes
-    container.style.transform = 'scale(1)';
-    if (controls) controls.style.transform = 'none';
-
-    // Natural left stack width (preview above scoreboard)
-    let leftW = 0;
-    if (preview) leftW = Math.max(leftW, Math.ceil(preview.getBoundingClientRect().width));
-    if (scoreboard) leftW = Math.max(leftW, Math.ceil(scoreboard.getBoundingClientRect().width));
-
-    // Natural right controls width
-    const rightW = controls ? Math.ceil(controls.getBoundingClientRect().width) : 0;
-
-    // Available central width and height for the board
-    const centralW = Math.max(0, W - pad*2 - leftW - rightW - gap*2);
-    const availH = Math.max(0, H - pad*2);
-
-    // Integer cell size to fit BOTH height (20 rows) and central width (10 cols)
-    const cell = Math.max(8, Math.min(Math.floor(availH/20), Math.floor(centralW/10)));
-    const boardW = cell * 10;
-    const boardH = cell * 20;
-
-    canvas.style.width = boardW + 'px';
-    canvas.style.height = boardH + 'px';
-
-    // Safety net: downscale container if still too big
-    const cRect = container.getBoundingClientRect();
-    const sX = (W - pad*2) / Math.max(1, cRect.width);
-    const sY = (H - pad*2) / Math.max(1, cRect.height);
-    const scale = Math.min(sX, sY, 1);
-    container.style.transform = 'scale(' + scale + ')';
-$3('resize', ()=> setTimeout(fit, 0), {passive:true});
-  window.addEventListener('orientationchange', ()=> setTimeout(fit, 80), {passive:true});
-  document.addEventListener('fullscreenchange', ()=> setTimeout(fit, 80));
-  document.addEventListener('visibilitychange', ()=> { if(!document.hidden) setTimeout(fit, 60); });
-  fit();
-})();
-</script>
-
-
-<script id="landscape-autofit">
-(function(){
-  function fitLandscape(){
-    const tc = document.getElementById('tetris-container');
-    const board = document.getElementById('tetris');
-    if (!tc || !board) return;
-    const isLandscape = window.innerWidth > window.innerHeight;
-    if (!isLandscape || window.innerWidth > 1024) return;
-    // Reset styles
-    board.style.width = '';
-    board.style.height = '';
-    tc.style.transform = 'scale(1)';
-    // Measure side columns
-    const preview = document.getElementById('preview-box');
-    const score = document.getElementById('scoreboard');
-    const controls = document.getElementById('touch-controls');
-    const leftW = Math.max(preview?.getBoundingClientRect().width || 0, score?.getBoundingClientRect().width || 0);
-    const rightW = controls?.getBoundingClientRect().width || 0;
-    const gapTotal = 8; // 4px + 4px
-    const availW = window.innerWidth - leftW - rightW - gapTotal;
-    const availH = window.innerHeight - 8; // some padding
-    const cell = Math.max(6, Math.min(Math.floor(availH / 20), Math.floor(availW / 10)));
-    const bw = cell * 10;
-    const bh = cell * 20;
-    board.style.width = bw + 'px';
-    board.style.height = bh + 'px';
-    // Optional: scale whole container down slightly if overflowing vertically
-    const rect = tc.getBoundingClientRect();
-    if (rect.height > window.innerHeight || rect.width > window.innerWidth){
-      const s = Math.min(window.innerWidth / rect.width, window.innerHeight / rect.height);
-      tc.style.transformOrigin = 'top center';
-      tc.style.transform = `scale(${s})`;
-    }
-  }
-  window.addEventListener('resize', fitLandscape, {passive:true});
-  window.addEventListener('orientationchange', ()=>setTimeout(fitLandscape, 60), {passive:true});
-  document.addEventListener('DOMContentLoaded', fitLandscape);
-})();
-</script>
-
-
-<script id="fs-fix">
-(function(){
-  const btn = document.getElementById('fullscreen-toggle');
-  if (!btn) return;
-  function isFS(){ return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement); }
-  function reqFS(el){
-    (el.requestFullscreen && el.requestFullscreen())
-    || (el.webkitRequestFullscreen && el.webkitRequestFullscreen())
-    || (el.msRequestFullscreen && el.msRequestFullscreen());
-  }
-  function exitFS(){
-    (document.exitFullscreen && document.exitFullscreen())
-    || (document.webkitExitFullscreen && document.webkitExitFullscreen())
-    || (document.msExitFullscreen && document.msExitFullscreen());
-  }
-  btn.addEventListener('click', function(){
-    if (isFS()) exitFS(); else reqFS(document.documentElement);
-    // Re-fit after the transition
-    setTimeout(()=>window.dispatchEvent(new Event('resize')), 120);
-  }, {passive: true});
-  document.addEventListener('fullscreenchange', ()=> setTimeout(()=>window.dispatchEvent(new Event('resize')), 80));
-})();
-</script>
-
 </body>
 </html>
