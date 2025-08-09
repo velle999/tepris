@@ -131,5 +131,34 @@
 </div>
   <!-- Main Game Logic -->
   <script src="tepris.js"></script>
+
+<script id="landscape-emergency-fit">
+(function(){
+  const wrapper = document.getElementById('tetris-wrapper');
+  const container = document.getElementById('tetris-container');
+  function fitAll(){
+    if (!wrapper) return;
+    // Reset any previous scale to measure natural size
+    wrapper.style.transformOrigin = 'top center';
+    wrapper.style.transform = 'scale(1)';
+    // Prefer container if present for tighter measure
+    const target = container || wrapper;
+    const rect = target.getBoundingClientRect();
+    const W = window.innerWidth, H = window.innerHeight;
+    const pad = Math.max(2, Math.min(12, Math.floor(Math.min(W,H)*0.01)));
+    const availW = Math.max(0, W - pad*2);
+    const availH = Math.max(0, H - pad*2);
+    const sX = availW / Math.max(1, rect.width);
+    const sY = availH / Math.max(1, rect.height);
+    const s = Math.min(sX, sY, 1);
+    wrapper.style.transform = 'scale(' + s + ')';
+  }
+  window.addEventListener('resize', fitAll, {passive:true});
+  window.addEventListener('orientationchange', ()=> setTimeout(fitAll, 60), {passive:true});
+  document.addEventListener('visibilitychange', ()=> { if (!document.hidden) setTimeout(fitAll,60); });
+  fitAll();
+})();
+</script>
+
 </body>
 </html>

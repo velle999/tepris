@@ -59,13 +59,9 @@ html, body {
   align-items: center;
   justify-content: flex-start;
   background: #111;
-  width: 100vw;
-  height: 100vh;
-  min-height: 100vh;
-  min-width: 100vw;
   padding: 0;
   box-sizing: border-box;
-  overflow: hidden;
+  /* Let the wrapper size naturally; scaling will fit it to viewport */
 }
 
 /* === Layout === */
