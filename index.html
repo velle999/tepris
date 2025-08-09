@@ -192,34 +192,40 @@
 
   function sizeCanvas() {
     if (!canvas) return;
+    const shell = document.getElementById('arcade-shell');
+    const wrapper = document.getElementById('tetris-wrapper');
 
-    const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
-    const W = isFS ? (screen.orientation && /landscape/i.test(screen.orientation.type) ? screen.width : screen.width) : window.innerWidth;
-    const H = isFS ? screen.height : window.innerHeight;
+    const rect = (shell || document.body).getBoundingClientRect();
+    let W = Math.floor(rect.width);
+    let H = Math.floor(rect.height);
+
+    // If rects fail (rare), fall back to window
+    if (!W || !H) { W = window.innerWidth; H = window.innerHeight; }
+
     const isLandscape = W > H;
 
     // Measure header (preview) and footer (touch controls)
     const headerEl = document.getElementById('preview-box');
     const footerEl = document.getElementById('touch-controls');
-    const headerH = headerEl ? Math.ceil(headerEl.getBoundingClientRect().height + 24) : 0;
-    let footerH = footerEl ? Math.ceil(footerEl.getBoundingClientRect().height + 16) : 0;
+    const headerH = headerEl ? Math.ceil(headerEl.getBoundingClientRect().height + 16) : 0;
+    let footerH = footerEl ? Math.ceil(footerEl.getBoundingClientRect().height + 12) : 0;
 
-    // Padding (smaller when fullscreen)
-    const padBase = Math.max(6, Math.min(20, Math.floor(Math.min(W,H) * 0.015)));
-    const pad = isFS ? Math.max(4, Math.floor(padBase * 0.6)) : padBase;
+    // Minimal padding so glow borders don't clip (smaller in tight views)
+    const pad = Math.max(4, Math.min(14, Math.floor(Math.min(W,H) * 0.012)));
 
-    // Available height for the board
+    // Available height within the shell AFTER header/footer
     let availH = H - pad*2 - headerH - footerH;
 
-    // If still too tight, scale controls
+    // If still tight, scale footer controls down to fit (down to 0.7x)
     if (footerEl) {
-      if (availH < 0.45 * H) {
-        // Try to scale controls down to 0.7x
-        const scale = Math.max(0.7, Math.min(1, (H - pad*2 - headerH - 160) / Math.max(footerH, 1)));
+      if (availH < H * 0.55) {
+        const targetMin = Math.max(180, H * 0.52);
+        const needed = (headerH + footerH + pad*2 + (H*0.48)) - H;
+        const scale = Math.max(0.7, Math.min(1, 1 - (needed / Math.max(footerH, 1))));
         footerEl.style.transformOrigin = 'bottom center';
-        footerEl.style.transform = `scale(${scale})`;
-        const rect = footerEl.getBoundingClientRect();
-        footerH = Math.ceil(rect.height + 12);
+        footerEl.style.transform = `scale(${isFinite(scale)?scale:1})`;
+        const rect2 = footerEl.getBoundingClientRect();
+        footerH = Math.ceil(rect2.height + 10);
         availH = H - pad*2 - headerH - footerH;
       } else {
         footerEl.style.transform = 'scale(1)';

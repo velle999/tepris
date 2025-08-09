@@ -30,9 +30,6 @@ html, body {
   cursor: pointer;
   box-shadow: 0 0 10px #0ff;
   transition: background 0.2s ease;
-  position: absolute;
-  top: 8px;
-  left: 8px;
   z-index: 10010;
 }
 
@@ -418,7 +415,21 @@ html, body {
 }
 
 @media (max-width: 900px) {
-  #fullscreen-toggle { display: inline-block; }
+  #fullscreen-toggle {
+  background: #0ff;
+  color: #000;
+  font-family: 'Press Start 2P', monospace;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  box-shadow: 0 0 10px #0ff;
+  transition: background 0.2s ease;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10010;
+}
 }
 
 :fullscreen #arcade-shell,
