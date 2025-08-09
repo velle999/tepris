@@ -67,11 +67,11 @@ html, body {
 
 /* === Layout === */
 #game-area {
-  display: flex;
-  flex-direction: row;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); /* Left spacer, Board, Right panel */
   align-items: flex-start;
-  justify-content: center;
+  justify-items: center;
+  column-gap: 12px;
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -368,4 +368,32 @@ html, body {
   border: none;
   border-top: 2px solid #088;
   margin: 12px 0 15px 0;
+}
+
+/* === Center the board, park info on the right === */
+#tetris-container { grid-column: 2; }
+#info-panel { grid-column: 3; justify-self: start; }
+
+/* On very wide screens, keep the board centered even if info grows */
+@media (min-width: 1200px) {
+  #game-area { grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); }
+}
+
+/* Mobile/tablet: stack with board first, info below */
+@media (max-width: 800px) {
+  #game-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+  #tetris-container, #info-panel { 
+    /* reset any grid placement */
+    grid-column: auto; 
+  }
+  #info-panel { 
+    justify-self: center; 
+    align-items: center;
+  }
 }
