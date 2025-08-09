@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>TEPRIS Arcade 🎮</title>
-  <link rel="stylesheet" href="style.css?v=rot2" />
+  <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     body {
@@ -53,53 +53,6 @@
     }
     #initials-modal button:hover { background: #00aaff; }
   </style>
-
-<style id="rotation-fix">
-  html, body { height: 100svh !important; width: 100svw !important; overflow: hidden !important; }
-  #arcade-shell { min-height: 100svh !important; width: 100svw !important; overflow: hidden !important; }
-  #tetris-wrapper { width: 100svw !important; min-height: 100svh !important; }
-  #game-area { 
-    display: flex !important; 
-    flex-wrap: wrap !important; 
-    justify-content: center !important; 
-    align-items: flex-start !important; 
-    gap: 12px !important;
-    width: 100svw !important; 
-    max-width: 100svw !important; 
-    max-height: 100svh !important; 
-    overflow: hidden !important;
-  }
-  /* Canvas fit using aspect-ratio */
-  #tetris {
-    width: min(92svw, calc(82svh / 2)) !important;
-    height: auto !important;
-    aspect-ratio: 10 / 20 !important;
-    max-height: 82svh !important;
-    max-width: 100% !important;
-  }
-  @media (orientation: landscape) {
-    #tetris { width: min(72svw, calc(88svh / 2)) !important; max-height: 88svh !important; }
-  }
-
-  /* Stronger landscape rules to avoid "half on screen" on some Android/Chrome combos */
-  @media (orientation: landscape) {
-    html, body { height: 100svh !important; width: 100svw !important; }
-    #arcade-shell { position: relative !important; }
-    #tetris-wrapper { position: relative !important; height: 100svh !important; width: 100svw !important; }
-    #game-area { gap: 8px !important; padding: 0 6px !important; }
-    /* Fit canvas height-first in landscape; 10x20 => width = height/2 */
-    #tetris { width: min(88svw, calc(94svh / 2)) !important; max-height: 94svh !important; }
-  }
-
-  /* Desktop: relax overrides to avoid cutting bottom */
-  @media (min-width: 900px) and (min-height: 600px) {
-    html, body { height: auto !important; width: 100% !important; }
-    #arcade-shell { position: relative !important; inset: auto !important; min-height: 100vh !important; width: 100% !important; }
-    #tetris-wrapper { min-height: auto !important; }
-    #tetris { max-height: 86vh !important; width: auto !important; max-width: min(52vw, 46vh) !important; }
-  }
-</style>
-
 </head>
 <body>
   <div id="crt-flash"></div>
@@ -133,7 +86,6 @@
   <audio id="tetris-sound" src="assets/tepris!.mp3" preload="auto"></audio>
   <div id="arcade-shell">
     <button id="tetris-toggle">🪙</button>
-    <button id="fullscreen-toggle" title="Fullscreen">⛶</button>
     <div id="insert-coin" style="position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-family:'Press Start 2P', monospace;font-size:20px;color:#0f0;text-shadow:0 0 3px #0f0;display:none;z-index:9998;">INSERT COIN</div>
     <div id="tetris-wrapper">
       <canvas id="preview-box"></canvas>
@@ -177,192 +129,6 @@
     style="margin-top:18px; font-size:1.2rem; background:#0ff; color:#000; border:none; border-radius:8px; padding:8px 30px;">OK</button>
 </div>
   <!-- Main Game Logic -->
-  <script src="tepris.js?v=rot2"></script>
-
-<script id="resize-backstop">
-(function() {
-  const canvas = document.getElementById('tetris');
-  const shell = document.getElementById('arcade-shell');
-  const wrapper = document.getElementById('tetris-wrapper');
-
-  function setVHVar() {
-    const vh = window.innerHeight * 0.01;
-    document.documentElement.style.setProperty('--vh', vh + 'px');
-  }
-
-  function sizeCanvas() {
-    if (!canvas) return;
-    const shell = document.getElementById('arcade-shell');
-    const headerEl = document.getElementById('preview-box');
-    const footerEl = document.getElementById('touch-controls');
-
-    const shellRect = (shell || document.body).getBoundingClientRect();
-    let W = Math.floor(shellRect.width);
-    let H = Math.floor(shellRect.height);
-    if (!W || !H) { W = window.innerWidth; H = window.innerHeight; }
-
-    // Measure header/footer heights (include a small buffer for margins)
-    let headerH = 0, footerH = 0;
-    if (headerEl) headerH = Math.ceil(headerEl.getBoundingClientRect().height + 8);
-    if (footerEl) footerH = Math.ceil(footerEl.getBoundingClientRect().height + 8);
-
-    // Dynamic padding (tiny on small screens)
-    const pad = Math.max(2, Math.min(12, Math.floor(Math.min(W,H) * 0.01)));
-
-    // Available box within shell
-    const availW = Math.max(0, W - pad*2);
-    let availH = Math.max(0, H - pad*2 - headerH - footerH);
-
-    // If very tight vertically, scale footer controls (down to 0.6x) and/or preview (down to 0.8x)
-    if (availH < H * 0.5) {
-      if (footerEl) {
-        const scaleF = Math.max(0.6, Math.min(1, (H - pad*2 - headerH - 220) / Math.max(footerH, 1)));
-        footerEl.style.transform = `scale(${isFinite(scaleF)?scaleF:1})`;
-        footerH = Math.ceil(footerEl.getBoundingClientRect().height + 6);
-      }
-      if (headerEl) {
-        const scaleH = Math.max(0.8, Math.min(1, (H - pad*2 - footerH - 220) / Math.max(headerH, 1)));
-        headerEl.style.transform = `scale(${isFinite(scaleH)?scaleH:1})`;
-        headerH = Math.ceil(headerEl.getBoundingClientRect().height + 6);
-      }
-      availH = Math.max(0, H - pad*2 - headerH - footerH);
-    } else {
-      if (footerEl) footerEl.style.transform = 'scale(1)';
-      if (headerEl) headerEl.style.transform = 'scale(1)';
-    }
-
-    // Compute an integer cell size to fit both width and height (10 cols x 20 rows)
-    const cellFromH = Math.floor(availH / 20);
-    const cellFromW = Math.floor(availW / 10);
-    let cell = Math.max(8, Math.min(cellFromH, cellFromW));
-    let targetW = cell * 10;
-    let targetH = cell * 20;
-    canvas.style.width = targetW + 'px';
-    canvas.style.height = targetH + 'px';
-
-    // --- Post-fit overflow correction: ensure canvas bottom stays within shell bottom ---
-    // Account for canvas borders in layout
-    const cs = getComputedStyle(canvas);
-    const borderY = (parseInt(cs.borderTopWidth)||0) + (parseInt(cs.borderBottomWidth)||0);
-    let cRect = canvas.getBoundingClientRect();
-    let overflow = (cRect.bottom + 0) - (shellRect.bottom - pad);
-    if (overflow > 0) {
-      // Estimate rows overflow and reduce cell accordingly
-      const cellPx = (cRect.height - borderY) / 20;
-      const rows = Math.ceil(overflow / Math.max(cellPx, 1));
-      cell = Math.max(6, cell - rows);
-      targetW = cell * 10;
-      targetH = cell * 20;
-      canvas.style.width = targetW + 'px';
-      canvas.style.height = targetH + 'px';
-    }
-}
-  function onResize() {
-    setVHVar();
-    sizeCanvas();
-  }
-
-  window.addEventListener('resize', onResize, { passive: true });
-  window.addEventListener('orientationchange', () => setTimeout(onResize, 60), { passive: true });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(onResize, 60); });
-
-  // Initial
-  onResize();
-})();
-</script>
-
-
-<script id="fullscreen-handler">
-(function(){
-  const btn = document.getElementById('fullscreen-toggle');
-  const shell = document.getElementById('arcade-shell');
-  if (!btn || !shell) return;
-
-  async function enterFS() {
-    try {
-      if (shell.requestFullscreen) await shell.requestFullscreen();
-      else if (shell.webkitRequestFullscreen) await shell.webkitRequestFullscreen();
-      if (screen.orientation && screen.orientation.lock) {
-        // Try to keep landscape gameplay if device is rotated; ignore errors
-        try { await screen.orientation.lock('landscape'); } catch {}
-      }
-    } catch (e) { console.warn('Fullscreen failed', e); }
-  }
-  async function exitFS() {
-    try {
-      if (document.exitFullscreen) await document.exitFullscreen();
-      else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
-    } catch (e) { console.warn('Exit FS failed', e); }
-  }
-  function isFS() {
-    return document.fullscreenElement || document.webkitFullscreenElement;
-  }
-  function toggleFS() {
-    if (isFS()) exitFS(); else enterFS();
-    // Slight delay to let viewport settle, then resize canvas
-    setTimeout(()=>window.dispatchEvent(new Event('resize')), 120);
-  }
-  btn.addEventListener('click', toggleFS);
-  document.addEventListener('fullscreenchange', ()=> setTimeout(()=>window.dispatchEvent(new Event('resize')), 60));
-})();
-</script>
-
+  <script src="tepris.js"></script>
 </body>
 </html>
-
-  <script>
-    (function() {
-      const wrapper = document.getElementById('tetris-wrapper');
-      const canvas = document.getElementById('tetris');
-      const shell = document.getElementById('arcade-shell');
-
-      function applyOrientationClass() {
-        const isLandscape = window.matchMedia('(orientation: landscape)').matches;
-        document.body.classList.toggle('landscape', !!isLandscape);
-      }
-
-      function syncHeights() {
-        // Use JS as a backstop in case svh isn't supported
-        const h = window.innerHeight;
-        const w = window.innerWidth;
-        if (wrapper) {
-          wrapper.style.height = h + 'px';
-          wrapper.style.width = w + 'px';
-        }
-        if (shell) {
-          shell.style.minHeight = h + 'px';
-          shell.style.width = w + 'px';
-        }
-        // Maintain scroll at top so mobile chrome UI doesn't shove layout
-        window.scrollTo(0, 0);
-      }
-
-      function fitCanvas() {
-        // Keep CSS aspect-ratio; we only nudge CSS width on extreme cases
-        const h = window.innerHeight;
-        const w = window.innerWidth;
-        // Desired width based on height (10:20 -> width = height / 2)
-        const widthFromHeight = Math.floor(h / 2);
-        const targetWidth = Math.min(Math.floor(w * 0.9), Math.floor(widthFromHeight * 0.94));
-        if (canvas) {
-          canvas.style.maxWidth = Math.max(200, targetWidth) + 'px';
-        }
-      }
-
-      function onResize() {
-        applyOrientationClass();
-        syncHeights();
-        fitCanvas();
-      }
-
-      // iOS sometimes fires resize before painting on rotation; delay a tick
-      window.addEventListener('orientationchange', () => setTimeout(onResize, 60));
-      window.addEventListener('resize', onResize);
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) setTimeout(onResize, 60);
-      });
-
-      // Initial
-      onResize();
-    })();
-  </script>
