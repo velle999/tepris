@@ -488,6 +488,7 @@ function pollGamepad() {
 
 // ========== Touch Controls (NEW & BUG-FREE) ==========
 
+// -- IDs of on-screen touch buttons --
 const TOUCH_BTN_IDS = [
   'left-btn', 'right-btn', 'down-btn',
   'rotate-btn', 'harddrop-btn', 'hold-btn'
@@ -610,16 +611,7 @@ function setPauseState(state) {
   if (!state && running) requestAnimationFrame(update);
 }
 function showPauseMenu() {
-  // Fit canvas for current viewport first
-  scheduleResizeNow();
-  const menu = document.getElementById('pause-menu');
-  if (menu) {
-    const { vw, vh } = getViewport();
-    menu.style.display = 'block';
-    menu.style.width = Math.min(500, Math.floor(vw * 0.9)) + 'px';
-    menu.style.maxHeight = Math.floor(vh * 0.9) + 'px';
-    menu.style.overflowY = 'auto';
-  }
+  document.getElementById('pause-menu').style.display = 'block';
   overlayMenuActive = true;
   overlayMenuItems = PAUSE_MENU_ITEMS.map(id => document.getElementById(id));
   overlayMenuIndex = 0;
@@ -647,8 +639,53 @@ function hideGameOverMenu() {
 function showGame() {
   const wrapper = document.getElementById('tetris-wrapper');
   if (wrapper) wrapper.style.display = 'flex';
-  // Let layout paint, then size everything
-  setTimeout(scheduleResizeNow, 0);
+  setTimeout(() => { resizeCanvas(); resizePreviewBox(); }, 0);
+}
+function resizeCanvas() {
+  if (!canvas) return;
+  const infoPanel = document.getElementById('info-panel');
+  let infoWidth = 0;
+  let infoHeight = 0;
+  if (infoPanel) {
+    const rect = infoPanel.getBoundingClientRect();
+    infoWidth = rect.width;
+    infoHeight = rect.height;
+  }
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  let boardWidth, boardHeight;
+  // Decide layout: if screen is wider than tall and panel occupies less than half width, place panel to side
+  if (vw > vh && infoWidth < vw * 0.5) {
+    boardWidth = vw - infoWidth;
+    boardHeight = vh;
+  } else {
+    // Stack panel below board on narrow screens
+    boardWidth = vw;
+    boardHeight = Math.max(0, vh - infoHeight);
+  }
+  const cellSize = Math.floor(Math.min(boardWidth / COLS, boardHeight / ROWS));
+  blockSize = Math.max(8, Math.min(64, cellSize || 8));
+  canvas.width  = blockSize * COLS;
+  canvas.height = blockSize * ROWS;
+  canvas.style.width  = `${canvas.width}px`;
+  canvas.style.height = `${canvas.height}px`;
+  draw();
+}
+function resizePreviewBox() {
+  if (!previewBox) return;
+  const infoPanel = document.getElementById('info-panel');
+  let size;
+  const maxSize = 150;
+  if (infoPanel) {
+    const rect = infoPanel.getBoundingClientRect();
+    size = Math.min(rect.width, maxSize);
+  } else {
+    size = Math.min(window.innerWidth * 0.2, maxSize);
+  }
+  previewBox.width  = size;
+  previewBox.height = size;
+  previewBox.style.width  = `${size}px`;
+  previewBox.style.height = `${size}px`;
 }
 function highlightOverlayMenuItem() {
   overlayMenuItems.forEach((btn, idx) => {
@@ -657,97 +694,6 @@ function highlightOverlayMenuItem() {
       if (idx === overlayMenuIndex) btn.focus();
     }
   });
-}
-
-// ========== Viewport / Resize / Fullscreen ==========
-
-function getViewport() {
-  // Use visualViewport where possible to account for mobile browser UI
-  const vv = window.visualViewport;
-  const vw = Math.floor((vv?.width ?? window.innerWidth));
-  const vh = Math.floor((vv?.height ?? window.innerHeight));
-  return { vw, vh };
-}
-
-function resizeCanvas() {
-  if (!canvas) return;
-
-  // Use visual viewport if available (mobile address bars etc.)
-  const vv = window.visualViewport;
-  const vw = Math.floor(vv?.width ?? window.innerWidth);
-
-  // Measure container and subtract HUD heights that sit below the canvas
-  const container = document.getElementById('tetris-container');
-  const cRect = container.getBoundingClientRect();
-
-  // Width available is container inner width (minus borders ~8px)
-  const availableW = Math.max(0, Math.floor(cRect.width - 8));
-
-  // HUD elements that steal vertical space under the board
-  const hudIds = ['landing-preview','scoreboard','touch-controls'];
-  let hudH = 0;
-  for (const id of hudIds) {
-    const el = document.getElementById(id);
-    if (!el) continue;
-    const r = el.getBoundingClientRect();
-    // Only count it if it’s inside the container and visible
-    const visible = el.offsetParent !== null;
-    if (visible && r.height) hudH += Math.ceil(r.height);
-  }
-
-  // Container height (minus borders ~8px), minus HUD below the canvas
-  // Fallback: if container has no explicit height, use visual viewport height from its top
-  let availableH = Math.floor(cRect.height - hudH - 8);
-  if (availableH <= 0) {
-    const topFromViewport = Math.max(0, Math.floor(cRect.top));
-    const vh = Math.floor(vv?.height ?? window.innerHeight);
-    availableH = Math.max(0, vh - topFromViewport - hudH - 8);
-  }
-
-  // Maintain 10:20 aspect ratio by picking the limiting dimension
-  const cellSize = Math.floor(Math.min(availableW / COLS, availableH / ROWS));
-
-  // Guardrails for tiny devices
-  blockSize = Math.max(8, Math.min(64, cellSize || 8));
-
-  // Set the true drawing resolution (prevents blur)
-  canvas.width  = blockSize * COLS;
-  canvas.height = blockSize * ROWS;
-
-  // Match CSS box to pixel buffer 1:1
-  canvas.style.width  = `${canvas.width}px`;
-  canvas.style.height = `${canvas.height}px`;
-
-  // Keep preview responsive but small
-  if (previewBox) {
-    const size = Math.min(Math.floor(vw * 0.18), 150);
-    previewBox.width = size; previewBox.height = size;
-    previewBox.style.width = `${size}px`;
-    previewBox.style.height = `${size}px`;
-  }
-
-  draw();
-}
-
-// Debounced/settled resize for mobile rotations & fullscreen
-let _resizeTimer = null;
-function scheduleResizeNow(delay = 0) {
-  if (_resizeTimer) clearTimeout(_resizeTimer);
-  _resizeTimer = setTimeout(() => {
-    resizeCanvas();
-    _resizeTimer = null;
-  }, delay);
-}
-
-// Fullscreen helper (double-click coin button also toggles)
-function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen?.().catch(err => {
-      console.warn(`Fullscreen request failed: ${err?.message || err}`);
-    });
-  } else {
-    document.exitFullscreen?.();
-  }
 }
 
 // ========== Main Game Loop ==========
@@ -862,8 +808,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Boot sequence and start game
   fakeBootSequence(()=>{
-    const coinBtn = document.getElementById('tetris-toggle');
-    coinBtn?.addEventListener('click', () => {
+    document.getElementById('tetris-toggle')?.addEventListener('click', () => {
       window.startTetris();
       if (bgMusic) {
         currentTrackIndex = Math.floor(Math.random() * bgTracks.length);
@@ -872,9 +817,6 @@ document.addEventListener('DOMContentLoaded', () => {
         playSafe(bgMusic);
       }
     });
-    // Optional fullscreen on double-tap coin
-    coinBtn?.addEventListener('dblclick', toggleFullscreen);
-
     window.startTetris = function() {
       if (window.__teprisStarted) return;
       window.__teprisStarted = true;
@@ -898,22 +840,14 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('insert-coin')?.style.setProperty('display', 'none');
       document.getElementById('tetris-toggle')?.style.setProperty('display', 'none');
       resetGamepadPolling();
-
-      // Ensure correct initial sizing even if not fullscreen
-      scheduleResizeNow(0);
-      // A follow-up resize once mobile UI settles
-      scheduleResizeNow(300);
     };
   });
 
-  // Global resize/orientation/fullscreen events
-  window.addEventListener('resize', () => { scheduleResizeNow(50); });
-  window.addEventListener('orientationchange', () => { scheduleResizeNow(350); });
-  document.addEventListener('fullscreenchange', () => { scheduleResizeNow(50); });
+  window.addEventListener('resize',()=>{ resizeCanvas(); resizePreviewBox(); });
+  window.addEventListener('load', () => { resizeCanvas(); resizePreviewBox(); });
 
-  // Start the gamepad loop!
+  // --- START THE GAMEPAD LOOP! ---
   startGamepadPolling();
 });
 
 // END OF FILE. Go touch grass. Or, if you’re reading this, maybe touch the hold button instead.
-

@@ -23,8 +23,6 @@
     #arcade-shell { background: #000; border: 10px solid #0ff; border-radius: 20px; padding: 20px; box-shadow: 0 0 20px #0ff; display: flex; flex-direction: column; align-items: center; position: relative;}
     #tetris-toggle { background: #0ff; color: #000; font-family: inherit; font-size: 1rem; padding: 10px 20px; border: none; border-radius: 8px; margin-bottom: 10px; cursor: pointer; box-shadow: 0 0 10px #0ff; transition: background 0.2s ease;}
     #tetris-toggle:hover { background: #00aaff;}
-    #fullscreen-btn { background: #0ff; color: #000; font-family: inherit; font-size: 1rem; padding: 6px 10px; border: none; border-radius: 6px; position: absolute; top: 10px; right: 10px; cursor: pointer; box-shadow: 0 0 8px #0ff; }
-    #fullscreen-btn:hover { background: #00aaff; }
     #tetris-wrapper { display: none; flex-direction: column; align-items: center; background: #111; padding: 10px; border-radius: 10px;}
     #game-area { display: flex; gap: 20px;}
     canvas#preview-box { width: 80px; height: 80px; border: 2px dashed #0ff; margin-bottom: 10px; background: rgba(0, 0, 0, 0.5);}
@@ -36,6 +34,7 @@
     @keyframes crt-flash { 0%{opacity:1;} 30%{opacity:0.4;} 60%{opacity:0.9;} 100%{opacity:0;}}
     #ready-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; font-size: 3rem; color: #0ff; background: rgba(0, 0, 0, 0.85); text-shadow: 0 0 10px #0ff; z-index: 10000; opacity: 0; transition: opacity 0.3s ease; font-family: 'Press Start 2P', monospace;}
     canvas { touch-action: none;}
+    /* New initials modal style */
     #initials-modal {
       display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(0,0,0,0.95); color: #0ff; z-index: 99999;
@@ -73,30 +72,31 @@
       <div class="controls-row"><b>Start / Enter:</b> Pause / Resume</div>
     </div>
   </div>
-
-  <div id="initials-modal">
-    <div style="font-size:2.1rem; margin-bottom:18px;">🎉 NEW HIGH SCORE!</div>
-    <div style="font-size:1.1rem; margin-bottom:8px;">Enter your initials:</div>
-    <input id="initials-input" maxlength="3" autocomplete="off" autocapitalize="on" spellcheck="false">
-    <button id="submit-initials">OK</button>
-  </div>
-
+  <!-- 🏆 Initials Modal (NEW!) -->
+<div id="initials-modal">
+  <div style="font-size:2.1rem; margin-bottom:18px;">🎉 NEW HIGH SCORE!</div>
+  <div style="font-size:1.1rem; margin-bottom:8px;">Enter your initials:</div>
+  <input id="initials-input" maxlength="3" autocomplete="off" autocapitalize="on" spellcheck="false">
+  <button id="submit-initials">OK</button>
+</div>
   <audio id="coin-sound" src="assets/coin.wav" preload="auto"></audio>
   <audio id="rotate-sound" src="assets/boop.mp3" preload="auto"></audio>
   <audio id="bg-music" src="assets/background.mp3" preload="auto"></audio>
   <audio id="points-sound" src="assets/points.mp3" preload="auto"></audio>
   <audio id="tetris-sound" src="assets/tepris!.mp3" preload="auto"></audio>
-
   <div id="arcade-shell">
     <button id="tetris-toggle">🪙</button>
-    <button id="fullscreen-btn">⛶</button>
     <div id="insert-coin" style="position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-family:'Press Start 2P', monospace;font-size:20px;color:#0f0;text-shadow:0 0 3px #0f0;display:none;z-index:9998;">INSERT COIN</div>
     <div id="tetris-wrapper">
-      <canvas id="preview-box"></canvas>
       <div id="game-area">
+        <!-- Game board container -->
         <div id="tetris-container">
           <canvas id="tetris"></canvas>
           <div id="landing-preview"></div>
+        </div>
+        <!-- Side panel: preview, scoreboard, and touch controls -->
+        <div id="info-panel">
+          <canvas id="preview-box"></canvas>
           <div id="scoreboard">
             <div>Score: <span id="score">0</span></div>
             <div>High Score: <span id="highScore">---</span></div>
@@ -115,24 +115,24 @@
       </div>
     </div>
   </div>
-
   <div id="gameover-menu" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
     background:rgba(0,0,0,0.92); color:#0ff; padding:36px 36px 22px 36px; border:2px solid #0ff; z-index:99999; border-radius:12px; min-width:220px; text-align:center;">
     <div style="font-size:2.1rem; font-family:'Press Start 2P',monospace; letter-spacing:0.08em; margin-bottom:14px;">GAME OVER</div>
     <div id="gameover-score" style="color:#fff; font-size:1.1rem; margin-bottom:18px;">Score: 0</div>
     <button id="restart-btn" style="font-size:1.5rem; font-family:inherit; background:#0ff; color:#000; border:none; border-radius:8px; padding:10px 34px; box-shadow:0 0 10px #0ff;">RESTART</button>
   </div>
-
+<div id="initials-overlay" style="
+  display:none; position:fixed; top:0; left:0; width:100vw; height:100vh;
+  background:rgba(0,0,0,0.96); color:#0ff; z-index:100000; text-align:center; align-items:center; justify-content:center; flex-direction:column;">
+  <div style="font-size:2.2rem; margin-top:14vh;">NEW HIGH SCORE!</div>
+  <div style="margin:22px auto;">Enter your initials:</div>
+  <input id="initials-input" type="text" maxlength="3"
+         style="font-size:2.5rem; width:90px; text-align:center; text-transform:uppercase; font-family:monospace; color:#0ff; background:#111; border:2px solid #0ff; border-radius:8px;">
+  <br>
+  <button id="initials-submit"
+    style="margin-top:18px; font-size:1.2rem; background:#0ff; color:#000; border:none; border-radius:8px; padding:8px 30px;">OK</button>
+</div>
+  <!-- Main Game Logic -->
   <script src="tepris.js"></script>
-  <script>
-    document.getElementById('fullscreen-btn')?.addEventListener('click', () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen();
-      } else {
-        document.exitFullscreen();
-      }
-    });
-  </script>
 </body>
 </html>
-

@@ -2,16 +2,17 @@
 html, body {
   margin: 0;
   padding: 0;
-  height: 100dvh;         /* real viewport on mobile */
-  width: 100dvw;
-  min-height: 100dvh;
-  min-width: 100dvw;
+  height: 100vh;
+  width: 100vw;
+  min-height: 100vh;
+  min-width: 100vw;
   background: linear-gradient(135deg, #1a1a1a, #000000);
   font-family: 'Courier New', monospace;
   color: #eee;
   overflow: hidden;
   touch-action: none;
   overscroll-behavior: none;
+  /* REMOVE position: fixed & display:flex here! Let the wrapper do layout. */
 }
 
 /* === Arcade Shell === */
@@ -20,8 +21,8 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100dvh;
-  width: 100dvw;
+  min-height: 100vh;
+  width: 100vw;
   position: relative;
   overflow: hidden;
 }
@@ -45,6 +46,7 @@ html, body {
   box-shadow: 0 0 12px #0ff;
   transition: all 0.3s ease;
 }
+
 #tetris-toggle:hover {
   background: #0ff;
   box-shadow: 0 0 16px #0ff;
@@ -57,10 +59,10 @@ html, body {
   align-items: center;
   justify-content: flex-start;
   background: #111;
-  width: 100dvw;
-  height: 100dvh;
-  min-height: 100dvh;
-  min-width: 100dvw;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  min-width: 100vw;
   padding: 0;
   box-sizing: border-box;
   overflow: hidden;
@@ -69,24 +71,22 @@ html, body {
 /* === Layout === */
 #game-area {
   display: flex;
-  gap: 12px;
   flex-wrap: wrap;
   justify-content: center;
   align-items: flex-start;
-  width: 100dvw;
-  max-width: 100dvw;
-  flex: 1;
-  max-height: 100dvh;
-  overflow: hidden;
+  gap: 12px;
+  width: 100vw;
+  max-width: 100vw;
+  max-height: 100vh;
   box-sizing: border-box;
   padding: 0;
+  overflow: hidden;
 }
 
 /* === Canvas & Container === */
 #tetris-container {
-  width: 100%;
-  max-width: 100dvw;      /* let JS sizing decide; don’t choke it */
-  max-height: 100dvh;
+  flex: 0 1 auto;
+  width: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -96,36 +96,49 @@ html, body {
   border: 4px ridge #0ff;
   background: repeating-linear-gradient(0deg, #000, #000 2px, #111 2px, #111 4px);
   box-shadow: 0 0 20px #0ff inset;
-  margin: 0 auto;
+  min-width: 200px;
+  min-height: 400px;
 }
 
-/* ======= Canvas: let JS control actual size; keep visual caps only ======= */
+/* ======= CRITICAL: Fixes for canvas stretching/auto-sizing issues ======= */
 #tetris {
   display: block;
+  margin: 0 auto;
   background: rgba(0, 0, 0, 0.85);
   border: 4px double #0ff;
   image-rendering: pixelated;
-  /* Remove hard aspect and max-* caps that override JS sizing: */
-  /* aspect-ratio: 10 / 20;  <-- remove */
-  /* max-height / max-width caps are not needed and can cause overflow math */
+  box-shadow: 0 0 10px #0f0, 0 0 40px #0ff;
+}
+
+/* === Info Panel (preview, scoreboard, controls) === */
+#info-panel {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  gap: 10px;
+  margin-left: 12px;
+  margin-top: 0;
+  max-width: 240px;
+  width: auto;
 }
 
 /* === Preview Box === */
 #preview-box {
-  width: 16vw;
-  height: 16vw;
-  max-width: 90px;
-  max-height: 90px;
+  width: 100%;
   aspect-ratio: 1 / 1;
+  max-width: 200px;
+  max-height: 200px;
   border: 2px dashed #0ff;
-  margin-bottom: 6px;
   background: rgba(0, 0, 0, 0.5);
   image-rendering: pixelated;
 }
 
 /* === Scoreboard === */
 #scoreboard {
-  margin-top: 6px;
+  margin: 0;
   font-size: 1rem;
   text-align: center;
   color: #00ffcc;
@@ -137,6 +150,7 @@ html, body {
   width: 100%;
   max-width: 300px;
 }
+
 #score, #level, #lines, #highScore {
   font-size: 12px;
   color: #0f0;
@@ -153,6 +167,7 @@ html, body {
   width: 100%;
   max-width: 360px;
 }
+
 #touch-controls button {
   flex: 1 1 40%;
   font-size: 2rem;
@@ -163,6 +178,7 @@ html, body {
   color: #fff;
   cursor: pointer;
 }
+
 #touch-controls button:hover {
   background: #00ffff;
   color: #000;
@@ -174,44 +190,121 @@ html, body {
   pointer-events: none;
   z-index: 10000;
 }
+
 #crt-flash {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100dvw;
-  height: 100dvh;
+  width: 100vw;
+  height: 100vh;
   background: white;
   opacity: 0;
   z-index: 9999;
   pointer-events: none;
 }
-@keyframes crt-flash { 0%{opacity:1;} 30%{opacity:0.4;} 60%{opacity:0.9;} 100%{opacity:0;} }
-@keyframes flashPulse { 0%{filter:brightness(1.5) saturate(1.5);} 50%{filter:brightness(2) saturate(2);} 100%{filter:brightness(1.5) saturate(1.5);} }
-.tetris-flash { animation: screenFlash 0.2s ease-in-out alternate 2; }
-@keyframes screenFlash { from { background-color: #fff; } to { background-color: #000; } }
-@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
-#insert-coin { animation: blink 1s infinite; }
+
+@keyframes crt-flash {
+  0%   { opacity: 1; }
+  30%  { opacity: 0.4; }
+  60%  { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+@keyframes flashPulse {
+  0% { filter: brightness(1.5) saturate(1.5); }
+  50% { filter: brightness(2) saturate(2); }
+  100% { filter: brightness(1.5) saturate(1.5); }
+}
+
+.tetris-flash {
+  animation: screenFlash 0.2s ease-in-out alternate 2;
+}
+
+@keyframes screenFlash {
+  from { background-color: #fff; }
+  to { background-color: #000; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+#insert-coin {
+  animation: blink 1s infinite;
+}
+
+/* === Responsive Tweaks === */
+@media (max-width: 600px) {
+  #tetris-container {
+    max-width: 98vw;
+    max-height: 99vh;
+  }
+
+  #tetris {
+    max-height: 60vh;
+    min-width: 120px;
+    min-height: 200px;
+  }
+
+  #preview-box {
+    width: 22vw;
+    height: 22vw;
+    max-width: 75px;
+    max-height: 75px;
+    margin-bottom: 4px;
+  }
+
+  #scoreboard {
+    font-size: 0.9rem;
+    padding: 3px 4px;
+    max-width: 240px;
+  }
+
+  #game-area {
+    gap: 8px;
+  }
+}
+
+/* === Background Screensaver === */
+#tepris-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -9999;
+  background: linear-gradient(270deg, #0f0c29, #302b63, #24243e);
+  background-size: 800% 800%;
+  animation: bgScreensaver 30s ease infinite;
+  filter: brightness(0.7) blur(3px) saturate(1.2);
+  pointer-events: none;
+}
+
+@keyframes bgScreensaver {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
 
 /* === Pause Menu Overlay === */
 #pause-menu {
   display: none;
-  position: fixed;                        /* fixed to viewport (not parent) */
+  position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   background: #000c;
   color: #0f0;
-  padding: 4vw 5vw;
+  padding: 24px 28px 20px 28px;
   border: 2.5px solid #0ff;
   border-radius: 14px;
   font-family: 'Press Start 2P', monospace;
   z-index: 10000;
-  width: 90vw;                            /* responsive width */
-  max-width: 500px;
-  max-height: 90dvh;                      /* don’t overflow on phones */
-  overflow-y: auto;
+  min-width: 320px;
   box-shadow: 0 0 20px #0ff3, 0 2px 18px #001;
 }
+
 #pause-menu button {
   display: block;
   width: 100%;
@@ -237,6 +330,7 @@ html, body {
   border-color: #fff;
   outline: 2px solid #fff;
 }
+
 #pause-menu #controls-layout {
   margin-top: 20px;
   background: rgba(20,32,32,0.96);
@@ -248,6 +342,7 @@ html, body {
   text-align: left;
   box-shadow: 0 0 12px #0ff2;
 }
+
 #pause-menu .controls-title {
   text-align: center;
   font-weight: bold;
@@ -267,51 +362,3 @@ html, body {
   border-top: 2px solid #088;
   margin: 12px 0 15px 0;
 }
-
-/* === Background Screensaver === */
-#tepris-background {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100dvw;
-  height: 100dvh;
-  z-index: -9999;
-  background: linear-gradient(270deg, #0f0c29, #302b63, #24243e);
-  background-size: 800% 800%;
-  animation: bgScreensaver 30s ease infinite;
-  filter: brightness(0.7) blur(3px) saturate(1.2);
-  pointer-events: none;
-}
-@keyframes bgScreensaver {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-/* === Responsive Tweaks === */
-@media (max-width: 600px) {
-  #tetris-container {
-    max-width: 100dvw;
-    max-height: 100dvh;
-  }
-  #preview-box {
-    width: 22vw;
-    height: 22vw;
-    max-width: 75px;
-    max-height: 75px;
-    margin-bottom: 4px;
-  }
-  #scoreboard {
-    font-size: 0.9rem;
-    padding: 3px 4px;
-    max-width: 240px;
-  }
-  #game-area { gap: 8px; }
-}
-
-/* Landscape-specific polish for phones */
-@media (orientation: landscape) and (max-height: 520px) {
-  #scoreboard { transform: scale(0.9); }
-  #touch-controls { transform: scale(0.9); }
-}
-
