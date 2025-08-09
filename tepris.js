@@ -642,29 +642,11 @@ function showGame() {
   setTimeout(() => { resizeCanvas(); resizePreviewBox(); }, 0);
 }
 function resizeCanvas() {
-  // Dynamically size the game board based on available width/height.
-  // Deduct a portion of the window height reserved for UI elements (scoreboard, preview, etc.)
   const container = document.getElementById('tetris-container') || document.body;
-  // Available width for the board (container width)
-  const vw = container.clientWidth;
-  // Available height for the board: total viewport height minus UI area.
-  // Use a small "fudge" offset to account for sub‑pixel rounding differences between devices.
-  const totalVh = window.innerHeight;
-  // Determine if the device likely has a coarse pointer (e.g. touchscreen) or is relatively short in height.
-  const isMobileish = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || totalVh < 700;
-  // Use a larger fudge on mobile to prevent the bottom of the board from being cut off, and a tiny fudge on desktop.
-  const fudge = isMobileish ? 4 : 1;
-  // Subtract the height reserved for UI (scoreboard, preview, touch controls). This value is tuned to the current layout.
-  const reservedHeight = 160;
-  const vh = Math.max(0, totalVh - reservedHeight - fudge);
-  // Compute the block size that fits both width and height constraints while maintaining a 10x20 aspect ratio.
-  blockSize = Math.max(12, Math.min(40, Math.floor(Math.min(vw / COLS, vh / ROWS))));
-  // Set the canvas resolution and its displayed size. Use pixel-perfect values to avoid blur.
-  canvas.width = blockSize * COLS;
-  canvas.height = blockSize * ROWS;
-  canvas.style.width = `${canvas.width}px`;
-  canvas.style.height = `${canvas.height}px`;
-  // Redraw the scene with the new size.
+  const vw = container.clientWidth, vh = window.innerHeight - 160;
+  blockSize = Math.max(12, Math.min(40, Math.floor(Math.min(vw/COLS, vh/ROWS))));
+  canvas.width = blockSize*COLS; canvas.height = blockSize*ROWS;
+  canvas.style.width = `${canvas.width}px`; canvas.style.height = `${canvas.height}px`;
   draw();
 }
 function resizePreviewBox() {
@@ -793,25 +775,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Boot sequence and start game
   fakeBootSequence(()=>{
-    // Bind click and touchstart events to the coin button so mobile taps start the game too.
-    const coinBtn = document.getElementById('tetris-toggle');
-    if (coinBtn) {
-      const startGame = (e) => {
-        // Prevent default to avoid unwanted focus/scroll on mobile
-        if (e && typeof e.preventDefault === 'function') e.preventDefault();
-        // Kick off the game boot sequence
-        window.startTetris();
-        // Shuffle and play background music (if available)
-        if (bgMusic) {
-          currentTrackIndex = Math.floor(Math.random() * bgTracks.length);
-          bgMusic.src = bgTracks[currentTrackIndex];
-          bgMusic.volume = 0.5;
-          playSafe(bgMusic);
-        }
-      };
-      coinBtn.addEventListener('click', startGame);
-      coinBtn.addEventListener('touchstart', startGame, { passive: false });
-    }
+    document.getElementById('tetris-toggle')?.addEventListener('click', () => {
+      window.startTetris();
+      if (bgMusic) {
+        currentTrackIndex = Math.floor(Math.random() * bgTracks.length);
+        bgMusic.src = bgTracks[currentTrackIndex];
+        bgMusic.volume = 0.5;
+        playSafe(bgMusic);
+      }
+    });
     window.startTetris = function() {
       if (window.__teprisStarted) return;
       window.__teprisStarted = true;

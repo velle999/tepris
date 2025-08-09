@@ -47,12 +47,6 @@ html, body {
   transition: all 0.3s ease;
 }
 
-/* Ensure overlay doesn’t block taps on mobile */
-#insert-coin {
-  /* Allow touches to pass through the insert-coin overlay so players can tap the coin button beneath it */
-  pointer-events: none;
-}
-
 #tetris-toggle:hover {
   background: #0ff;
   box-shadow: 0 0 16px #0ff;
@@ -110,17 +104,13 @@ html, body {
 /* ======= CRITICAL: Fixes for canvas stretching/auto-sizing issues ======= */
 #tetris {
   display: block;
+  /* Canvas sizing is controlled via JavaScript. Avoid overriding width/height here. */
   margin: 0 auto;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 10 / 20;
-  max-height: 65vh;
-  max-width: 100%;
   background: rgba(0, 0, 0, 0.85);
   border: 4px double #0ff;
   image-rendering: pixelated;
   box-shadow: 0 0 10px #0f0, 0 0 40px #0ff;
-  /* Prevent resizing bugs on load/OS window resize */
+  /* Enforce a minimal visible canvas size for very small screens */
   min-width: 200px;
   min-height: 400px;
 }
