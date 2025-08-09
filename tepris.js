@@ -642,13 +642,26 @@ function showGame() {
   setTimeout(() => { resizeCanvas(); resizePreviewBox(); }, 0);
 }
 function resizeCanvas() {
-  const container = document.getElementById('tetris-container') || document.body;
-  const vw = container.clientWidth, vh = window.innerHeight - 160;
-  blockSize = Math.max(12, Math.min(40, Math.floor(Math.min(vw/COLS, vh/ROWS))));
-  canvas.width = blockSize*COLS; canvas.height = blockSize*ROWS;
-  canvas.style.width = `${canvas.width}px`; canvas.style.height = `${canvas.height}px`;
+  // Use full viewport, not just the container
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Maintain 10:20 ratio
+  const cellSize = Math.floor(Math.min(vw / COLS, vh / ROWS));
+
+  // Allow slightly smaller blocks if needed for tiny screens
+  blockSize = Math.max(8, cellSize);
+
+  canvas.width = blockSize * COLS;
+  canvas.height = blockSize * ROWS;
+
+  // Scale canvas visually
+  canvas.style.width = `${canvas.width}px`;
+  canvas.style.height = `${canvas.height}px`;
+
   draw();
 }
+
 function resizePreviewBox() {
   const size = Math.min(window.innerWidth * 0.2, 150);
   previewBox.width = size; previewBox.height = size;
