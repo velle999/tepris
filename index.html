@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>TEPRIS Arcade 🎮</title>
   <link rel="stylesheet" href="style.css?v=rot2" />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -79,6 +79,16 @@
   }
   @media (orientation: landscape) {
     #tetris { width: min(72svw, calc(88svh / 2)) !important; max-height: 88svh !important; }
+  }
+
+  /* Stronger landscape rules to avoid "half on screen" on some Android/Chrome combos */
+  @media (orientation: landscape) {
+    html, body { height: 100svh !important; width: 100svw !important; }
+    #arcade-shell { position: fixed !important; inset: 0 !important; min-height: 100svh !important; width: 100svw !important; }
+    #tetris-wrapper { position: relative !important; height: 100svh !important; width: 100svw !important; }
+    #game-area { gap: 8px !important; padding: 0 6px !important; }
+    /* Fit canvas height-first in landscape; 10x20 => width = height/2 */
+    #tetris { width: min(88svw, calc(94svh / 2)) !important; max-height: 94svh !important; }
   }
 </style>
 
