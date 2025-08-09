@@ -744,7 +744,8 @@ resizeCanvas = function() {
   candidatePanel = Math.max(minPanel, Math.min(maxPanel, candidatePanel));
 
   // Fudge factor to avoid a 3-4px cutoff on some mobile devices (e.g., S24 FE)
-  const fudge = 4;
+  const fconst fudge = (vh < 700) ? 4 : 0;
+udge = 4;
 
   // Side layout cell size
   let availWSide = vw - candidatePanel - gap - totalMargin;
