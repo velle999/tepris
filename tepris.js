@@ -239,6 +239,9 @@ function resetPiece() {
     return;
   }
 }
+resizeCanvas();
+resizePreviewBox();
+
 function drop() {
   if (!running || paused || overlayMenuActive || isFlashing) return;
   pos.y++;
@@ -611,6 +614,7 @@ function setPauseState(state) {
   if (!state && running) requestAnimationFrame(update);
 }
 function showPauseMenu() {
+  resizeCanvas(); // <-- forces playfield to fit before showing pause menu
   document.getElementById('pause-menu').style.display = 'block';
   overlayMenuActive = true;
   overlayMenuItems = PAUSE_MENU_ITEMS.map(id => document.getElementById(id));
@@ -852,6 +856,13 @@ function resizeCanvas() {
 
   window.addEventListener('resize',()=>{ resizeCanvas(); resizePreviewBox(); });
   window.addEventListener('load', () => { resizeCanvas(); resizePreviewBox(); });
+  window.addEventListener('orientationchange', () => {
+  setTimeout(() => {
+    resizeCanvas();
+    resizePreviewBox();
+  }, 200); // slight delay so mobile browser UI finishes animating
+});
+
 
   // --- START THE GAMEPAD LOOP! ---
   startGamepadPolling();

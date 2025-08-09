@@ -286,12 +286,13 @@ html, body {
   transform: translate(-50%, -50%);
   background: #000c;
   color: #0f0;
-  padding: 24px 28px 20px 28px;
+  padding: 4vw 5vw;
   border: 2.5px solid #0ff;
   border-radius: 14px;
   font-family: 'Press Start 2P', monospace;
   z-index: 10000;
-  min-width: 320px;
+  width: 80vw;
+  max-width: 500px;
   box-shadow: 0 0 20px #0ff3, 0 2px 18px #001;
 }
 
