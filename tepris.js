@@ -1,5 +1,5 @@
 // ============================================================================
-//    TEPRIS ENGINE: RGB SLIDE + BG + FLASH LINES + WORKING TOUCH BUTTONS
+//    TEPRIS ENGINE: RGB SLIDE + BG + FLASH LINES + GAMEPAD + BUG-FREE TOUCH
 //    2025 Velle & ChatGPT: Because normal Tetris is for cowards
 // ============================================================================
 
@@ -45,7 +45,9 @@ let lastButtonStates = Array(17).fill(false);
 let gamepadPollActive = false;
 
 let rgbMode = false;
-let isFlashing = false; // Important: prevents new drops during flash
+let isFlashing = false;
+
+// ========== Utility & Rendering ==========
 
 function getRGBColor(t) {
   const r = Math.floor(128 + 128 * Math.sin(t/600));
@@ -84,7 +86,8 @@ function playSafe(audio) {
   try { audio.pause(); audio.currentTime = 0; audio.play().catch(()=>{}); } catch {}
 }
 
-// --- RENDERING ---
+// ========== Rendering ==========
+
 function drawMatrix(matrix, offset, _ctx = ctx, size = blockSize, color = "#0ff", opacity = 1) {
   if (!matrix || !offset || !_ctx) return;
   _ctx.save();
@@ -94,7 +97,6 @@ function drawMatrix(matrix, offset, _ctx = ctx, size = blockSize, color = "#0ff"
     if (val) {
       const gx = x + offset.x, gy = y + offset.y, now = t + gx*77 + gy*99;
       let fillC = rgbMode ? getRGBColor(now) : color;
-      // --- FLASH EFFECT FOR ROWS BEING CLEARED ---
       if (flashingCells.some(c=>c.x===gx&&c.y===gy)) fillC = "#fff";
       _ctx.fillStyle = fillC;
       _ctx.fillRect(gx*size, gy*size, size, size);
@@ -140,7 +142,8 @@ function draw() {
   drawCRTOverlay(ctx);
 }
 
-// --- GAME LOGIC ---
+// ========== Game Logic ==========
+
 function movePiece(dir) {
   if (!running || paused || overlayMenuActive || isFlashing) return;
   if (dir === "left")  { pos.x--; if (collide(arena, { matrix: current, pos })) pos.x++; }
@@ -264,7 +267,6 @@ function sweep() {
     if (arena[y].every(v => v !== 0)) rowsToClear.push(y);
 
   if (rowsToClear.length) {
-    // 1. Mark which cells should flash
     rowsToClear.forEach(y => {
       for (let x = 0; x < COLS; x++) flashingCells.push({ x, y });
     });
@@ -295,7 +297,8 @@ function sweep() {
   }
 }
 
-// --- UI / FX ---
+// ========== UI / FX ==========
+
 function updateScore() {
   if (scoreDisplay) scoreDisplay.textContent = score;
   if (highScoreDisplay) highScoreDisplay.textContent = `${highScoreInitials} ${highScore}`;
@@ -374,7 +377,8 @@ function promptInitialsModal(callback) {
   input.addEventListener('keydown', onKeyDown);
 }
 
-// --- KEYBOARD INPUT ---
+// ========== Keyboard Input ==========
+
 document.addEventListener('keydown', (e) => {
   if (overlayMenuActive) {
     if (e.key === "ArrowDown") { overlayMenuIndex = (overlayMenuIndex + 1) % overlayMenuItems.length; highlightOverlayMenuItem(); e.preventDefault(); }
@@ -402,7 +406,8 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// --- GAMEPAD POLLING ---
+// ========== Gamepad Polling ==========
+
 function pollOverlayMenuGamepad() {
   if (!overlayMenuActive) return;
   const gp = navigator.getGamepads?.()[0];
@@ -481,25 +486,43 @@ function pollGamepad() {
   requestAnimationFrame(pollGamepad);
 }
 
+// ========== Touch Controls (NEW & BUG-FREE) ==========
+
+// -- IDs of on-screen touch buttons --
+const TOUCH_BTN_IDS = [
+  'left-btn', 'right-btn', 'down-btn',
+  'rotate-btn', 'harddrop-btn', 'hold-btn'
+];
+function isTouchButtonEvent(e) {
+  function checkTarget(t) {
+    if (!t || !t.target) return false;
+    return TOUCH_BTN_IDS.some(id => {
+      const el = document.getElementById(id);
+      return el && (t.target === el || el.contains(t.target));
+    });
+  }
+  if (e.touches && e.touches.length)
+    for (let i = 0; i < e.touches.length; ++i)
+      if (checkTarget(e.touches[i])) return true;
+  if (e.changedTouches && e.changedTouches.length)
+    for (let i = 0; i < e.changedTouches.length; ++i)
+      if (checkTarget(e.changedTouches[i])) return true;
+  return checkTarget(e);
+}
+
 function addTouchControls() {
   let startX = 0, startY = 0, moved = false, longPressTimer = null, lastTap = 0;
   const threshold = 38, doubleTapGap = 320;
 
   window.addEventListener('touchstart', e => {
-    if (!e.touches || e.touches.length > 2 || overlayMenuActive) return;
+    if (!e.touches || e.touches.length > 2 || overlayMenuActive || isTouchButtonEvent(e)) return;
     const t = e.touches[0];
-    startX = t.clientX;
-    startY = t.clientY;
-    moved = false;
-    longPressTimer = setTimeout(() => {
-      navigator.vibrate?.(100);
-      hardDrop();
-    }, 420);
-    // console.log('touchstart', {x: startX, y: startY});
+    startX = t.clientX; startY = t.clientY; moved = false;
+    longPressTimer = setTimeout(() => { navigator.vibrate?.(100); hardDrop(); }, 420);
   }, { passive: false });
 
   window.addEventListener('touchmove', e => {
-    if (!e.touches || e.touches.length > 2 || overlayMenuActive) return;
+    if (!e.touches || e.touches.length > 2 || overlayMenuActive || isTouchButtonEvent(e)) return;
     clearTimeout(longPressTimer);
     const t = e.touches[0];
     const dx = t.clientX - startX, dy = t.clientY - startY;
@@ -517,30 +540,25 @@ function addTouchControls() {
       movePiece('down');
       startY = t.clientY;
     }
-    // console.log('touchmove', {dx, dy, moved});
   }, { passive: false });
 
   window.addEventListener('touchend', e => {
+    if (isTouchButtonEvent(e)) return;
     clearTimeout(longPressTimer);
-    if (e.changedTouches.length === 2) {
+    if (e.changedTouches && e.changedTouches.length === 2) {
       navigator.vibrate?.([30,30,30]);
       hardDrop();
       return;
     }
-    if (moved) {
-      // console.log('touchend - moved, no rotate');
-      return;
-    }
+    if (moved) return;
     const now = Date.now();
     if (now - lastTap < doubleTapGap) {
       setPauseState(!paused);
       lastTap = 0;
-      // console.log('touchend - pause');
     } else {
       navigator.vibrate?.(8);
       rotatePiece(1);
       lastTap = now;
-      // console.log('touchend - rotate');
     }
   }, { passive: false });
 
@@ -551,8 +569,6 @@ function addTouchButtonListeners() {
   function bindTouchMouse(id, fn) {
     const el = document.getElementById(id);
     if (!el) return;
-
-    // Per-element touch lock flag
     let lastTouch = 0;
 
     el.addEventListener('touchstart', e => {
@@ -562,11 +578,7 @@ function addTouchButtonListeners() {
     }, { passive: false });
 
     el.addEventListener('mousedown', e => {
-      // If mousedown happens within 500ms of a touchstart, ignore it!
-      if (Date.now() - lastTouch < 500) {
-        // console.log(`[${id}] Ignored ghost mousedown`);
-        return;
-      }
+      if (Date.now() - lastTouch < 500) return;
       e.preventDefault();
       fn();
     });
@@ -589,7 +601,8 @@ function addTouchButtonListeners() {
   });
 }
 
-// --- OVERLAY/MENU ---
+// ========== Overlay/Menu System ==========
+
 function setPauseState(state) {
   paused = state;
   if (paused) showPauseMenu();
@@ -598,6 +611,8 @@ function setPauseState(state) {
   if (!state && running) requestAnimationFrame(update);
 }
 function showPauseMenu() {
+  // When showing the pause menu, adjust the layout
+  scheduleResizeNow(0);
   document.getElementById('pause-menu').style.display = 'block';
   overlayMenuActive = true;
   overlayMenuItems = PAUSE_MENU_ITEMS.map(id => document.getElementById(id));
@@ -650,7 +665,8 @@ function highlightOverlayMenuItem() {
   });
 }
 
-// --- MAIN GAME LOOP ---
+// ========== Main Game Loop ==========
+
 function update(time=0) {
   if (paused || overlayMenuActive) return;
   const deltaTime = time - lastTime; lastTime = time;
@@ -660,7 +676,172 @@ function update(time=0) {
   if (running || isFlashing) requestAnimationFrame(update);
 }
 
-// --- FAKE BIOS BOOT ---
+/* ---------------- Responsive Layout Helpers (Added) ---------------- */
+/**
+ * Return the current viewport dimensions. When available, visualViewport is used to account
+ * for mobile browser chrome and zoom, otherwise window.innerWidth/innerHeight.
+ */
+function getViewport() {
+  const vv = window.visualViewport;
+  return {
+    vw: vv ? vv.width : window.innerWidth,
+    vh: vv ? vv.height : window.innerHeight,
+  };
+}
+
+/**
+ * Debounced scheduling of the resize. Multiple rapid events will only trigger one resize.
+ */
+let _resizeTimer = null;
+function scheduleResizeNow(delay = 0) {
+  if (_resizeTimer) clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
+    resizeCanvas();
+    _resizeTimer = null;
+  }, delay);
+}
+
+/**
+ * Toggle fullscreen on the entire document. Safely ignores errors if fullscreen is not supported.
+ */
+function toggleFullscreen() {
+  try {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+  } catch (err) {
+    console.warn('Fullscreen toggle failed', err);
+  }
+}
+
+/*
+ * Override resizeCanvas with responsive sizing logic. This implementation measures both
+ * side-by-side and stacked layouts and chooses whichever yields the larger block size. It
+ * carefully subtracts borders and gaps so the board never spills off-screen.
+ */
+resizeCanvas = function() {
+  if (!canvas) return;
+  const gameArea = document.getElementById('game-area');
+  const tContainer = document.getElementById('tetris-container');
+  const infoPanel = document.getElementById('info-panel');
+  if (!gameArea || !tContainer || !infoPanel) return;
+
+  // Viewport measurement
+  const { vw, vh } = getViewport();
+
+  // Constants: border widths and gap
+  const containerBorder = 4;
+  const canvasBorder = 4;
+  const gap = 12;
+  const totalMargin = (containerBorder + canvasBorder) * 2;
+
+  // Panel constraints
+  const minPanel = 150;
+  const maxPanel = 240;
+  let candidatePanel = Math.floor(vw * 0.25);
+  candidatePanel = Math.max(minPanel, Math.min(maxPanel, candidatePanel));
+
+  // Fudge factor to avoid a 3-4px cutoff on some mobile devices (e.g., S24 FE)
+  const fudge = 4;
+
+  // Side layout cell size
+  let availWSide = vw - candidatePanel - gap - totalMargin;
+  let availHSide = vh - totalMargin - fudge;
+  if (availWSide < 0) availWSide = 0;
+  if (availHSide < 0) availHSide = 0;
+  const cellSide = Math.floor(Math.min(availWSide / COLS, availHSide / ROWS));
+
+  // Stacked layout: board occupies 70% height
+  const heightRatio = 0.7;
+  let availWStack = vw - totalMargin;
+  let availHStack = vh * heightRatio - totalMargin - fudge;
+  if (availWStack < 0) availWStack = 0;
+  if (availHStack < 0) availHStack = 0;
+  const cellStack = Math.floor(Math.min(availWStack / COLS, availHStack / ROWS));
+
+  // Decide on the layout that maximises block size; tie goes to side layout
+  const useSide = cellSide >= cellStack;
+  let cell = useSide ? cellSide : cellStack;
+  if (!Number.isFinite(cell) || cell <= 0) cell = 8;
+
+  // Compute board dimensions
+  const boardWidth = cell * COLS;
+  const boardHeight = cell * ROWS;
+
+  if (useSide) {
+    // Place info panel to the right
+    gameArea.style.flexDirection = 'row';
+    tContainer.style.width = `${boardWidth}px`;
+    tContainer.style.height = `${boardHeight}px`;
+    // Remaining width after placing board and borders/gaps
+    let remainingW = vw - boardWidth - totalMargin - gap;
+    // Clamp panel width
+    let panelW = Math.max(minPanel, Math.min(maxPanel, remainingW));
+    infoPanel.style.width = `${panelW}px`;
+    infoPanel.style.height = `${boardHeight}px`;
+  } else {
+    // Stack info panel under the board
+    gameArea.style.flexDirection = 'column';
+    tContainer.style.width = `${boardWidth}px`;
+    tContainer.style.height = `${boardHeight}px`;
+    infoPanel.style.width = `${boardWidth}px`;
+    let remainingH = vh - boardHeight - totalMargin - gap - fudge;
+    if (remainingH < 0) remainingH = 0;
+    infoPanel.style.height = `${remainingH}px`;
+  }
+
+  // Set actual canvas resolution and displayed size
+  blockSize = cell;
+  canvas.width = blockSize * COLS;
+  canvas.height = blockSize * ROWS;
+  canvas.style.width = `${canvas.width}px`;
+  canvas.style.height = `${canvas.height}px`;
+
+  // Preview sizing
+  if (previewBox) {
+    let previewMax;
+    if (useSide) {
+      const panelWNow = parseInt(infoPanel.style.width || candidatePanel);
+      previewMax = Math.min(Math.floor(panelWNow * 0.8), 200);
+    } else {
+      previewMax = Math.min(Math.floor(boardWidth * 0.4), 200);
+    }
+    const previewSize = Math.max(50, previewMax);
+    previewBox.width = previewSize;
+    previewBox.height = previewSize;
+    previewBox.style.width = `${previewSize}px`;
+    previewBox.style.height = `${previewSize}px`;
+  }
+
+  // Make scoreboard and touch controls fill panel width
+  const scoreboard = document.getElementById('scoreboard');
+  const touchControls = document.getElementById('touch-controls');
+  if (scoreboard) {
+    scoreboard.style.width = '100%';
+    scoreboard.style.boxSizing = 'border-box';
+  }
+  if (touchControls) {
+    touchControls.style.width = '100%';
+    touchControls.style.boxSizing = 'border-box';
+  }
+
+  draw();
+};
+
+// Override preview resizing: handled in resizeCanvas
+resizePreviewBox = function() {};
+
+// Override showGame to call scheduleResizeNow
+showGame = function() {
+  const wrapper = document.getElementById('tetris-wrapper');
+  if (wrapper) wrapper.style.display = 'flex';
+  setTimeout(() => { scheduleResizeNow(0); }, 0);
+};
+
+// ========== Fake BIOS Boot ==========
+
 function fakeBootSequence(cb) {
   const boot=document.createElement('div');
   boot.id='bios-boot'; boot.style="position:absolute;top:0;left:0;width:100%;height:100%;background:#000;color:#0f0;font-family:Courier New,monospace;padding:20px;z-index:9999;";
@@ -669,7 +850,8 @@ function fakeBootSequence(cb) {
   let i=0, interval=setInterval(()=>{if(i<lines.length)bootText.textContent+='\n'+lines[i++];else{clearInterval(interval);setTimeout(()=>{boot.remove();showInsertCoinPrompt();cb?.();},1000);}},400);
 }
 
-// --- INIT ---
+// ========== INIT ==========
+
 document.addEventListener('DOMContentLoaded', () => {
   canvas = document.getElementById('tetris');
   ctx = canvas.getContext('2d');
@@ -719,7 +901,17 @@ document.addEventListener('DOMContentLoaded', () => {
     bgMusic.muted = !bgMusic.muted;
     muteBtn.textContent = bgMusic.muted ? '🔈 Unmute BGM' : '🔇 Mute BGM';
   });
-  inputToggleBtn?.addEventListener('click',()=>{ shuffleNextTrack(); });
+  inputToggleBtn?.addEventListener('click',()=>{ 
+    // "input toggle" actually shuffles tracks in this build. It's a secret.
+    let nextIdx = currentTrackIndex;
+    while (bgTracks.length > 1 && nextIdx === currentTrackIndex) {
+      nextIdx = Math.floor(Math.random() * bgTracks.length);
+    }
+    currentTrackIndex = nextIdx;
+    bgMusic.src = bgTracks[currentTrackIndex];
+    bgMusic.currentTime = 0;
+    bgMusic.play().catch(()=>{});
+  });
 
   // Game Over Menu
   document.getElementById('restart-btn')?.addEventListener('click', () => {
@@ -781,14 +973,25 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('insert-coin')?.style.setProperty('display', 'none');
       document.getElementById('tetris-toggle')?.style.setProperty('display', 'none');
       resetGamepadPolling();
+
+      // Ensure correct initial sizing even if not fullscreen
+      scheduleResizeNow(0);
+      // Additional resize after UI settles (important on mobile)
+      scheduleResizeNow(300);
     };
   });
 
-  window.addEventListener('resize',()=>{ resizeCanvas(); resizePreviewBox(); });
-  window.addEventListener('load', () => { resizeCanvas(); resizePreviewBox(); });
+  // Bind fullscreen button
+  document.getElementById('fullscreen-btn')?.addEventListener('click', toggleFullscreen);
+
+  // Global resize/orientation/fullscreen events
+  window.addEventListener('resize', () => { scheduleResizeNow(50); });
+  window.addEventListener('orientationchange', () => { scheduleResizeNow(350); });
+  document.addEventListener('fullscreenchange', () => { scheduleResizeNow(50); });
+  window.addEventListener('load', () => { scheduleResizeNow(50); });
 
   // --- START THE GAMEPAD LOOP! ---
   startGamepadPolling();
 });
 
-// END OF FILE. If you read this far, treat yourself to an extra line clear. Or a pizza.
+// END OF FILE. Go touch grass. Or, if you’re reading this, maybe touch the hold button instead.
