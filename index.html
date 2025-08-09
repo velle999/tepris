@@ -193,49 +193,69 @@
   function sizeCanvas() {
     if (!canvas) return;
     const shell = document.getElementById('arcade-shell');
-    const wrapper = document.getElementById('tetris-wrapper');
-
-    const rect = (shell || document.body).getBoundingClientRect();
-    let W = Math.floor(rect.width);
-    let H = Math.floor(rect.height);
-    if (!W || !H) { W = window.innerWidth; H = window.innerHeight; }
-
-    // Measure header/footer
     const headerEl = document.getElementById('preview-box');
     const footerEl = document.getElementById('touch-controls');
-    const headerH = headerEl ? Math.ceil(headerEl.getBoundingClientRect().height + 12) : 0;
-    let footerH = footerEl ? Math.ceil(footerEl.getBoundingClientRect().height + 8) : 0;
 
-    // Padding for glow/borders
-    const pad = Math.max(4, Math.min(14, Math.floor(Math.min(W,H) * 0.012)));
+    const shellRect = (shell || document.body).getBoundingClientRect();
+    let W = Math.floor(shellRect.width);
+    let H = Math.floor(shellRect.height);
+    if (!W || !H) { W = window.innerWidth; H = window.innerHeight; }
 
-    // Available content box
+    // Measure header/footer heights (include a small buffer for margins)
+    let headerH = 0, footerH = 0;
+    if (headerEl) headerH = Math.ceil(headerEl.getBoundingClientRect().height + 8);
+    if (footerEl) footerH = Math.ceil(footerEl.getBoundingClientRect().height + 8);
+
+    // Dynamic padding (tiny on small screens)
+    const pad = Math.max(2, Math.min(12, Math.floor(Math.min(W,H) * 0.01)));
+
+    // Available box within shell
     const availW = Math.max(0, W - pad*2);
     let availH = Math.max(0, H - pad*2 - headerH - footerH);
 
-    // If tight, scale controls down to free space
-    if (footerEl && availH < H * 0.52) {
-      const scale = Math.max(0.7, Math.min(1, (H - pad*2 - headerH - 200) / Math.max(footerH, 1)));
-      footerEl.style.transformOrigin = 'bottom center';
-      footerEl.style.transform = `scale(${isFinite(scale)?scale:1})`;
-      const rect2 = footerEl.getBoundingClientRect();
-      footerH = Math.ceil(rect2.height + 6);
+    // If very tight vertically, scale footer controls (down to 0.6x) and/or preview (down to 0.8x)
+    if (availH < H * 0.5) {
+      if (footerEl) {
+        const scaleF = Math.max(0.6, Math.min(1, (H - pad*2 - headerH - 220) / Math.max(footerH, 1)));
+        footerEl.style.transform = `scale(${isFinite(scaleF)?scaleF:1})`;
+        footerH = Math.ceil(footerEl.getBoundingClientRect().height + 6);
+      }
+      if (headerEl) {
+        const scaleH = Math.max(0.8, Math.min(1, (H - pad*2 - footerH - 220) / Math.max(headerH, 1)));
+        headerEl.style.transform = `scale(${isFinite(scaleH)?scaleH:1})`;
+        headerH = Math.ceil(headerEl.getBoundingClientRect().height + 6);
+      }
       availH = Math.max(0, H - pad*2 - headerH - footerH);
-    } else if (footerEl) {
-      footerEl.style.transform = 'scale(1)';
+    } else {
+      if (footerEl) footerEl.style.transform = 'scale(1)';
+      if (headerEl) headerEl.style.transform = 'scale(1)';
     }
 
-    // --- KEY FIX ---
-    // Compute an integer cell size that fits BOTH dimensions: 10 cols, 20 rows.
+    // Compute an integer cell size to fit both width and height (10 cols x 20 rows)
     const cellFromH = Math.floor(availH / 20);
     const cellFromW = Math.floor(availW / 10);
-    const cell = Math.max(8, Math.min(cellFromH, cellFromW)); // min cell size safety
-
-    const targetW = cell * 10;
-    const targetH = cell * 20;
-
+    let cell = Math.max(8, Math.min(cellFromH, cellFromW));
+    let targetW = cell * 10;
+    let targetH = cell * 20;
     canvas.style.width = targetW + 'px';
     canvas.style.height = targetH + 'px';
+
+    // --- Post-fit overflow correction: ensure canvas bottom stays within shell bottom ---
+    // Account for canvas borders in layout
+    const cs = getComputedStyle(canvas);
+    const borderY = (parseInt(cs.borderTopWidth)||0) + (parseInt(cs.borderBottomWidth)||0);
+    let cRect = canvas.getBoundingClientRect();
+    let overflow = (cRect.bottom + 0) - (shellRect.bottom - pad);
+    if (overflow > 0) {
+      // Estimate rows overflow and reduce cell accordingly
+      const cellPx = (cRect.height - borderY) / 20;
+      const rows = Math.ceil(overflow / Math.max(cellPx, 1));
+      cell = Math.max(6, cell - rows);
+      targetW = cell * 10;
+      targetH = cell * 20;
+      canvas.style.width = targetW + 'px';
+      canvas.style.height = targetH + 'px';
+    }
 }
   function onResize() {
     setVHVar();
