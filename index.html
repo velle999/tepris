@@ -160,5 +160,89 @@
 })();
 </script>
 
+
+<script id="fit-v1">
+(function(){
+  const canvas = document.getElementById('tetris');
+  const container = document.getElementById('tetris-container');
+  const header = document.getElementById('preview-box');
+  const controls = document.getElementById('touch-controls');
+  const fsBtn = document.getElementById('fullscreen-toggle');
+
+  function isFS(){ return document.fullscreenElement || document.webkitFullscreenElement; }
+  async function enterFS(){ try{ await (document.documentElement.requestFullscreen?.()||document.documentElement.webkitRequestFullscreen?.()); }catch(e){} }
+  async function exitFS(){ try{ await (document.exitFullscreen?.()||document.webkitExitFullscreen?.()); }catch(e){} }
+  function toggleFS(){ if(isFS()) exitFS(); else enterFS(); setTimeout(fit, 80); }
+  if (fsBtn) fsBtn.addEventListener('click', toggleFS);
+
+  function fit(){
+    if (!canvas || !container) return;
+    // Use viewport size
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    // Measure header & controls natural heights
+    const hH = header ? Math.ceil(header.getBoundingClientRect().height + 8) : 0;
+    const cH_nat = controls ? Math.ceil(controls.getBoundingClientRect().height + 8) : 0;
+    const isLandscape = W > H;
+
+    // In landscape, overlay controls if tight and reserve a budget so they don't cover rows
+    const overlay = isLandscape;
+    const controlsBudget = overlay ? Math.ceil((cH_nat || 72) * 0.85) : cH_nat;
+
+    const pad = Math.max(2, Math.min(12, Math.floor(Math.min(W,H) * 0.01)));
+    const availW = Math.max(0, W - pad*2);
+    const availH = Math.max(0, H - pad*2 - hH - (overlay?0:controlsBudget));
+
+    // Integer tile sizing to fit both dimensions
+    const cell = Math.max(8, Math.min(Math.floor(availH/20), Math.floor(availW/10)));
+    const boardW = cell * 10;
+    const boardH = cell * 20;
+    canvas.style.width = boardW + 'px';
+    canvas.style.height = boardH + 'px';
+
+    // Downscale whole container if still larger than available area
+    container.style.transform = 'scale(1)';
+    const cRect = container.getBoundingClientRect();
+    const aW2 = availW;
+    const aH2 = Math.max(0, H - pad*2 - hH - (overlay?0:controlsBudget));
+    const scale = Math.min(aW2/Math.max(1,cRect.width), aH2/Math.max(1,cRect.height), 1);
+    container.style.transformOrigin = 'top center';
+    container.style.transform = `scale(${scale})`;
+
+    // If overlay, pin controls as floating at bottom center and scale them to match
+    if (controls){
+      if (overlay){
+        const sRect = container.getBoundingClientRect();
+        controls.style.position = 'fixed';
+        controls.style.left = '50%';
+        controls.style.bottom = Math.max(8, pad) + 'px';
+        controls.style.transform = `translateX(-50%) scale(${Math.min(1, Math.max(0.6, H/600))})`;
+        controls.style.transformOrigin = 'bottom center';
+        controls.style.zIndex = 10020;
+        controls.style.background = 'rgba(0,0,0,0.3)';
+        controls.style.padding = '6px 8px';
+        controls.style.borderRadius = '10px';
+        controls.style.backdropFilter = 'blur(2px)';
+      } else {
+        controls.style.position = '';
+        controls.style.left = '';
+        controls.style.bottom = '';
+        controls.style.transform = 'scale(1)';
+        controls.style.background = '';
+        controls.style.padding = '';
+        controls.style.borderRadius = '';
+        controls.style.backdropFilter = '';
+      }
+    }
+  }
+
+  window.addEventListener('resize', ()=> setTimeout(fit, 0), {passive:true});
+  window.addEventListener('orientationchange', ()=> setTimeout(fit, 80), {passive:true});
+  document.addEventListener('fullscreenchange', ()=> setTimeout(fit, 80));
+  document.addEventListener('visibilitychange', ()=> { if(!document.hidden) setTimeout(fit, 60); });
+  fit();
+})();
+</script>
+
 </body>
 </html>
