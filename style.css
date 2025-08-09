@@ -408,3 +408,61 @@ html, body {
   #fullscreen-toggle { position: fixed; top: 10px; right: 10px; z-index: 10050; }
 }
 
+
+
+/* === Mobile Landscape Tight Autofit Grid === */
+@media (orientation: landscape) and (max-width: 1024px) {
+  #tetris-container {
+    display: grid !important;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: min-content min-content;
+    align-items: start;
+    justify-items: center;
+    gap: 4px;
+    width: 100%;
+  }
+  /* Preview top-left */
+  #preview-box { grid-column: 1; grid-row: 1; }
+  /* Scoreboard below preview */
+  #scoreboard  { grid-column: 1; grid-row: 2; }
+  /* Board centered column */
+  #tetris      { grid-column: 2; grid-row: 1 / span 2; }
+  /* Controls right column */
+  #touch-controls { 
+    grid-column: 3; grid-row: 1 / span 2;
+    position: static !important;
+    display: flex; flex-direction: column; gap: 6px;
+    transform: none !important;
+    background: transparent; padding: 0; border-radius: 0; backdrop-filter: none;
+    align-items: center; justify-content: flex-start;
+  }
+  #touch-controls > button { width: auto; min-width: 44px; }
+}
+
+
+
+/* === Mobile Landscape Autofit Grid === */
+@media (orientation: landscape) {
+  #tetris-container {
+    display: grid !important;
+    grid-template-columns: auto 1fr auto; /* left hugs, board flexes, right hugs */
+    grid-auto-rows: min-content;
+    gap: 6px;
+    align-items: start;
+    justify-items: center;
+    width: 100%;
+  }
+  #preview-box { grid-column: 1; grid-row: 1; }
+  #scoreboard  { grid-column: 1; grid-row: 2; }
+  #tetris      { grid-column: 2; grid-row: 1 / span 3; }
+  #touch-controls {
+    grid-column: 3; grid-row: 1 / span 3;
+    display: flex; flex-direction: column; gap: 6px;
+    position: static !important;
+    transform: none !important;
+    background: transparent; padding: 0; border-radius: 0; backdrop-filter: none;
+  }
+  #touch-controls > button { width: auto; min-width: 44px; }
+  #fullscreen-toggle { position: fixed; top: 10px; right: 10px; z-index: 10050; }
+}
+
