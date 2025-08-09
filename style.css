@@ -78,7 +78,7 @@ html, body {
 }
 
 /* === Canvas & Container === */
-#tetris-container { grid-column: 2; }
+#tetris-container { grid-column: 4; justify-self: start; }
 
 /* ======= The main Tetris canvas. Its size is controlled by JavaScript. ======= */
 #tetris {
@@ -148,7 +148,7 @@ html, body {
 }
 
 /* === Info Panel === */
-#info-panel { grid-column: 4; justify-self: start; }
+#info-panel { grid-column: 2; justify-self: end; }
 
 /* === Fullscreen Button === */
 #fullscreen-btn {
@@ -224,7 +224,7 @@ html, body {
 
 /* === Responsive Tweaks === */
 @media (max-width: 600px) {
-  #tetris-container { grid-column: 2; }
+  #tetris-container { grid-column: 4; justify-self: start; }
 
   #tetris {
     max-height: 60vh;
@@ -349,12 +349,12 @@ html, body {
 }
 
 /* === Center the board, park info on the right === */
-#tetris-container { grid-column: 2; }
-#info-panel { grid-column: 4; justify-self: start; }
+#tetris-container { grid-column: 4; justify-self: start; }
+#info-panel { grid-column: 2; justify-self: end; }
 
 /* On very wide screens, keep the board centered even if info grows */
 @media (min-width: 1200px) {
-  #game-area { grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); }
+  #game-area { grid-template-columns: 1fr auto 12px auto 1fr; }
 }
 
 /* Mobile/tablet: stack with board first, info below */
@@ -367,10 +367,8 @@ html, body {
     justify-content: flex-start;
     gap: 10px;
   }
-  #tetris-container, #info-panel {
-    grid-column: auto;
-  }
+  #tetris-container, #info-panel { grid-column: 2; justify-self: end; }
 }
 
-  #info-panel { grid-column: 4; justify-self: start; }
+  #info-panel { grid-column: 2; justify-self: end; }
 }
