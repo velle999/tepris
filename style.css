@@ -1,19 +1,9 @@
 :root{--vh:1vh;}
 /* === Global Defaults === */
 html, body {
-  margin: 0;
-  padding: 0;
-  height: 100svh;
-  width: 100svw;
-  min-height: 100svh;
-  min-width: 100svw;
-  background: linear-gradient(135deg, #1a1a1a, #000000);
-  font-family: 'Courier New', monospace;
-  color: #eee;
-  overflow: hidden;
-  touch-action: none;
-  overscroll-behavior: none;
-  /* REMOVE position: fixed & display:flex here! Let the wrapper do layout. */
+  margin: 0; padding: 0;
+  height: calc(var(--vh, 1vh) * 100);
+  width: 100%;
   overflow: hidden;
 }
 
@@ -26,27 +16,24 @@ html, body {
   min-height: calc(var(--vh, 1vh) * 100);
   width: 100%;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* === Insert Coin Button === */
 #tetris-toggle {
-  font-family: 'Courier New', monospace;
-  font-size: 2.5rem;
-  padding: 24px 48px;
-  touch-action: manipulation;
-  background: #00ffff;
+  background: #0ff;
   color: #000;
+  font-family: 'Press Start 2P', monospace;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
+  padding: 10px 12px;
   cursor: pointer;
+  box-shadow: 0 0 10px #0ff;
+  transition: background 0.2s ease;
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 5000;
-  box-shadow: 0 0 12px #0ff;
-  transition: all 0.3s ease;
+  top: 8px;
+  left: 8px;
+  z-index: 10010;
 }
 
 #tetris-toggle:hover {
@@ -401,12 +388,43 @@ html, body {
   border: none;
   border-radius: 8px;
   padding: 10px 12px;
-  margin-left: 10px;
   cursor: pointer;
   box-shadow: 0 0 10px #0ff;
   transition: background 0.2s ease;
-  position: relative;
-  z-index: 10000;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10010;
 }
 #fullscreen-toggle:hover { background: #00aaff; }
-:fullscreen #fullscreen-toggle { background: #0fa; }
+:fullscreen #fullscreen-toggle {
+  background: #0ff;
+  color: #000;
+  font-family: 'Press Start 2P', monospace;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  box-shadow: 0 0 10px #0ff;
+  transition: background 0.2s ease;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10010;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  #tetris { max-height: 76vh; }
+}
+
+@media (max-width: 900px) {
+  #fullscreen-toggle { display: inline-block; }
+}
+
+:fullscreen #arcade-shell,
+:-webkit-full-screen #arcade-shell {
+  position: fixed !important;
+  inset: 0 !important;
+  min-height: 100vh !important;
+  width: 100vw !important;
+}

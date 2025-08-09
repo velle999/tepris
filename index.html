@@ -192,29 +192,47 @@
 
   function sizeCanvas() {
     if (!canvas) return;
-    const W = window.innerWidth;
-    const H = window.innerHeight;
+
+    const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    const W = isFS ? (screen.orientation && /landscape/i.test(screen.orientation.type) ? screen.width : screen.width) : window.innerWidth;
+    const H = isFS ? screen.height : window.innerHeight;
     const isLandscape = W > H;
 
-    // Minimal padding to avoid clipping glow borders
-    const pad = Math.max(6, Math.min(20, Math.floor(Math.min(W,H) * 0.015)));
+    // Measure header (preview) and footer (touch controls)
+    const headerEl = document.getElementById('preview-box');
+    const footerEl = document.getElementById('touch-controls');
+    const headerH = headerEl ? Math.ceil(headerEl.getBoundingClientRect().height + 24) : 0;
+    let footerH = footerEl ? Math.ceil(footerEl.getBoundingClientRect().height + 16) : 0;
 
-    if (isLandscape) {
-      // Landscape: fit by width first, but don't exceed height
-      const maxW = Math.floor((W - pad*2));          // full width
-      const widthFromH = Math.floor((H - pad*2) / 2); // 10:20 => w = h/2
-      const targetW = Math.max(200, Math.min(maxW, widthFromH));
-      canvas.style.width = targetW + 'px';
-      canvas.style.height = Math.floor(targetW * 2) + 'px';
-    } else {
-      // Portrait: fit by height first
-      const maxH = H - pad*2;
-      const widthFromH = Math.floor(maxH / 2);
-      const maxW = Math.floor((W - pad*2) * 0.98);
-      const targetW = Math.max(180, Math.min(widthFromH, maxW));
-      canvas.style.width = targetW + 'px';
-      canvas.style.height = Math.floor(targetW * 2) + 'px';
+    // Padding (smaller when fullscreen)
+    const padBase = Math.max(6, Math.min(20, Math.floor(Math.min(W,H) * 0.015)));
+    const pad = isFS ? Math.max(4, Math.floor(padBase * 0.6)) : padBase;
+
+    // Available height for the board
+    let availH = H - pad*2 - headerH - footerH;
+
+    // If still too tight, scale controls
+    if (footerEl) {
+      if (availH < 0.45 * H) {
+        // Try to scale controls down to 0.7x
+        const scale = Math.max(0.7, Math.min(1, (H - pad*2 - headerH - 160) / Math.max(footerH, 1)));
+        footerEl.style.transformOrigin = 'bottom center';
+        footerEl.style.transform = `scale(${scale})`;
+        const rect = footerEl.getBoundingClientRect();
+        footerH = Math.ceil(rect.height + 12);
+        availH = H - pad*2 - headerH - footerH;
+      } else {
+        footerEl.style.transform = 'scale(1)';
+      }
     }
+
+    // Board width from available height (10:20 => w = h / 2)
+    const widthFromH = Math.floor(availH / 2);
+    const maxW = Math.floor(W - pad*2);
+    const targetW = Math.max(200, Math.min(widthFromH, maxW));
+
+    canvas.style.width = targetW + 'px';
+    canvas.style.height = Math.floor(targetW * 2) + 'px';
   }
   function onResize() {
     setVHVar();
