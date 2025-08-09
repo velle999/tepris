@@ -611,6 +611,8 @@ function setPauseState(state) {
   if (!state && running) requestAnimationFrame(update);
 }
 function showPauseMenu() {
+  // When showing the pause menu, adjust the layout
+  scheduleResizeNow(0);
   document.getElementById('pause-menu').style.display = 'block';
   overlayMenuActive = true;
   overlayMenuItems = PAUSE_MENU_ITEMS.map(id => document.getElementById(id));
@@ -639,127 +641,20 @@ function hideGameOverMenu() {
 function showGame() {
   const wrapper = document.getElementById('tetris-wrapper');
   if (wrapper) wrapper.style.display = 'flex';
-  // When showing the game, resize immediately so board and panel fit current viewport
-  setTimeout(() => { resizeCanvas(); }, 0);
+  setTimeout(() => { resizeCanvas(); resizePreviewBox(); }, 0);
 }
 function resizeCanvas() {
-  // Determine viewport dimensions (use visualViewport if available)
-  const vv = window.visualViewport;
-  const vw = Math.floor(vv?.width || window.innerWidth);
-  const vh = Math.floor(vv?.height || window.innerHeight);
-
-  const gameArea = document.getElementById('game-area');
-  const infoPanel = document.getElementById('info-panel');
-  const container = document.getElementById('tetris-container');
-
-  // fallback if elements not yet created
-  if (!canvas || !container || !infoPanel) return;
-
-  // Gap between board and info panel (must match CSS gap)
-  const gap = 12;
-
-  // Decide orientation based on viewport: landscape vs portrait
-  const isLandscape = vw > vh;
-
-  // Compute side layout candidate cell size
-  // Compute side panel width dynamically: aim to give the board enough width (vh/2) while keeping within min/max bounds
-  const MIN_SIDE_PANEL = 160;
-  const MAX_SIDE_PANEL = 240;
-  // Ideal board width so that height limits the cell size (board height = 2*board width)
-  const idealBoardWidth = vh / 2;
-  let sidePanelWidth = vw - idealBoardWidth - gap;
-  // Clamp panel width between min and max limits
-  sidePanelWidth = Math.max(MIN_SIDE_PANEL, Math.min(MAX_SIDE_PANEL, sidePanelWidth));
-
-  const boardWidthSide = vw - sidePanelWidth - gap;
-  const boardHeightSide = vh;
-  const cellSide = Math.floor(Math.min(boardWidthSide / COLS, boardHeightSide / ROWS));
-
-  // Compute stacked layout candidate cell size
-  const stackPanelHeight = Math.min(vh * 0.3, 240); // 30% of height or max 240px
-  const boardWidthStack = vw;
-  const boardHeightStack = vh - stackPanelHeight - gap;
-  const cellStack = Math.floor(Math.min(boardWidthStack / COLS, boardHeightStack / ROWS));
-
-  // Choose layout: use landscape orientation or whichever yields larger cell size
-  let useSide = false;
-  if (isLandscape) {
-    useSide = true;
-  } else {
-    useSide = cellSide > cellStack;
-  }
-
-  let cellSize;
-  let infoWidth;
-
-  if (useSide) {
-    // Side-by-side layout
-    cellSize = Math.max(8, Math.min(64, cellSide));
-    infoWidth = sidePanelWidth;
-    // Set info panel width constraints
-    infoPanel.style.width = `${infoWidth}px`;
-    infoPanel.style.maxWidth = `${infoWidth}px`;
-    infoPanel.style.minWidth = `${infoWidth}px`;
-    infoPanel.style.height = 'auto';
-    // Set board container width/height
-    const boardW = cellSize * COLS;
-    const boardH = cellSize * ROWS;
-    container.style.width = `${boardW}px`;
-    container.style.height = `${boardH}px`;
-  } else {
-    // Stacked layout: info panel below board
-    cellSize = Math.max(8, Math.min(64, cellStack));
-    // Info panel takes full width
-    infoPanel.style.width = '100%';
-    infoPanel.style.maxWidth = '';
-    infoPanel.style.minWidth = '';
-    infoPanel.style.height = 'auto';
-    // Set board container dimensions
-    const boardW = cellSize * COLS;
-    const boardH = cellSize * ROWS;
-    container.style.width = `${boardW}px`;
-    container.style.height = `${boardH}px`;
-  }
-
-  // Update block size and canvas resolution
-  blockSize = cellSize;
-  canvas.width = cellSize * COLS;
-  canvas.height = cellSize * ROWS;
-  canvas.style.width = `${canvas.width}px`;
-  canvas.style.height = `${canvas.height}px`;
-
-  // Determine panel width for preview sizing
-  let panelWidth;
-  if (useSide) {
-    panelWidth = infoWidth;
-  } else {
-    panelWidth = parseFloat(container.style.width) || vw;
-  }
-  // Compute preview box size: 4 blocks wide, limited by panel width and max 200px
-  const previewSize = Math.min(cellSize * 4, panelWidth * 0.8, 200);
-  if (previewBox) {
-    previewBox.width = previewSize;
-    previewBox.height = previewSize;
-    previewBox.style.width = `${previewSize}px`;
-    previewBox.style.height = `${previewSize}px`;
-  }
-
-  // Ensure scoreboard and controls fill full panel width
-  const scoreboard = document.getElementById('scoreboard');
-  if (scoreboard) {
-    scoreboard.style.width = '100%';
-  }
-  const touchControls = document.getElementById('touch-controls');
-  if (touchControls) {
-    touchControls.style.width = '100%';
-  }
-
-  // Redraw the board
+  const container = document.getElementById('tetris-container') || document.body;
+  const vw = container.clientWidth, vh = window.innerHeight - 160;
+  blockSize = Math.max(12, Math.min(40, Math.floor(Math.min(vw/COLS, vh/ROWS))));
+  canvas.width = blockSize*COLS; canvas.height = blockSize*ROWS;
+  canvas.style.width = `${canvas.width}px`; canvas.style.height = `${canvas.height}px`;
   draw();
 }
 function resizePreviewBox() {
-  // Preview box sizing is now handled by resizeCanvas to keep things consistent.
-  resizeCanvas();
+  const size = Math.min(window.innerWidth * 0.2, 150);
+  previewBox.width = size; previewBox.height = size;
+  previewBox.style.width = `${size}px`; previewBox.style.height = `${size}px`;
 }
 function highlightOverlayMenuItem() {
   overlayMenuItems.forEach((btn, idx) => {
@@ -780,6 +675,170 @@ function update(time=0) {
   draw();
   if (running || isFlashing) requestAnimationFrame(update);
 }
+
+/* ---------------- Responsive Layout Helpers (Added) ---------------- */
+/**
+ * Return the current viewport dimensions. When available, visualViewport is used to account
+ * for mobile browser chrome and zoom, otherwise window.innerWidth/innerHeight.
+ */
+function getViewport() {
+  const vv = window.visualViewport;
+  return {
+    vw: vv ? vv.width : window.innerWidth,
+    vh: vv ? vv.height : window.innerHeight,
+  };
+}
+
+/**
+ * Debounced scheduling of the resize. Multiple rapid events will only trigger one resize.
+ */
+let _resizeTimer = null;
+function scheduleResizeNow(delay = 0) {
+  if (_resizeTimer) clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
+    resizeCanvas();
+    _resizeTimer = null;
+  }, delay);
+}
+
+/**
+ * Toggle fullscreen on the entire document. Safely ignores errors if fullscreen is not supported.
+ */
+function toggleFullscreen() {
+  try {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+  } catch (err) {
+    console.warn('Fullscreen toggle failed', err);
+  }
+}
+
+/*
+ * Override resizeCanvas with responsive sizing logic. This implementation measures both
+ * side-by-side and stacked layouts and chooses whichever yields the larger block size. It
+ * carefully subtracts borders and gaps so the board never spills off-screen.
+ */
+resizeCanvas = function() {
+  if (!canvas) return;
+  const gameArea = document.getElementById('game-area');
+  const tContainer = document.getElementById('tetris-container');
+  const infoPanel = document.getElementById('info-panel');
+  if (!gameArea || !tContainer || !infoPanel) return;
+
+  // Viewport measurement
+  const { vw, vh } = getViewport();
+
+  // Constants: border widths and gap
+  const containerBorder = 4;
+  const canvasBorder = 4;
+  const gap = 12;
+  const totalMargin = (containerBorder + canvasBorder) * 2;
+
+  // Panel constraints
+  const minPanel = 150;
+  const maxPanel = 240;
+  let candidatePanel = Math.floor(vw * 0.25);
+  candidatePanel = Math.max(minPanel, Math.min(maxPanel, candidatePanel));
+
+  // Fudge factor to avoid a 3-4px cutoff on some mobile devices (e.g., S24 FE)
+  const fudge = 4;
+
+  // Side layout cell size
+  let availWSide = vw - candidatePanel - gap - totalMargin;
+  let availHSide = vh - totalMargin - fudge;
+  if (availWSide < 0) availWSide = 0;
+  if (availHSide < 0) availHSide = 0;
+  const cellSide = Math.floor(Math.min(availWSide / COLS, availHSide / ROWS));
+
+  // Stacked layout: board occupies 70% height
+  const heightRatio = 0.7;
+  let availWStack = vw - totalMargin;
+  let availHStack = vh * heightRatio - totalMargin - fudge;
+  if (availWStack < 0) availWStack = 0;
+  if (availHStack < 0) availHStack = 0;
+  const cellStack = Math.floor(Math.min(availWStack / COLS, availHStack / ROWS));
+
+  // Decide on the layout that maximises block size; tie goes to side layout
+  const useSide = cellSide >= cellStack;
+  let cell = useSide ? cellSide : cellStack;
+  if (!Number.isFinite(cell) || cell <= 0) cell = 8;
+
+  // Compute board dimensions
+  const boardWidth = cell * COLS;
+  const boardHeight = cell * ROWS;
+
+  if (useSide) {
+    // Place info panel to the right
+    gameArea.style.flexDirection = 'row';
+    tContainer.style.width = `${boardWidth}px`;
+    tContainer.style.height = `${boardHeight}px`;
+    // Remaining width after placing board and borders/gaps
+    let remainingW = vw - boardWidth - totalMargin - gap;
+    // Clamp panel width
+    let panelW = Math.max(minPanel, Math.min(maxPanel, remainingW));
+    infoPanel.style.width = `${panelW}px`;
+    infoPanel.style.height = `${boardHeight}px`;
+  } else {
+    // Stack info panel under the board
+    gameArea.style.flexDirection = 'column';
+    tContainer.style.width = `${boardWidth}px`;
+    tContainer.style.height = `${boardHeight}px`;
+    infoPanel.style.width = `${boardWidth}px`;
+    let remainingH = vh - boardHeight - totalMargin - gap - fudge;
+    if (remainingH < 0) remainingH = 0;
+    infoPanel.style.height = `${remainingH}px`;
+  }
+
+  // Set actual canvas resolution and displayed size
+  blockSize = cell;
+  canvas.width = blockSize * COLS;
+  canvas.height = blockSize * ROWS;
+  canvas.style.width = `${canvas.width}px`;
+  canvas.style.height = `${canvas.height}px`;
+
+  // Preview sizing
+  if (previewBox) {
+    let previewMax;
+    if (useSide) {
+      const panelWNow = parseInt(infoPanel.style.width || candidatePanel);
+      previewMax = Math.min(Math.floor(panelWNow * 0.8), 200);
+    } else {
+      previewMax = Math.min(Math.floor(boardWidth * 0.4), 200);
+    }
+    const previewSize = Math.max(50, previewMax);
+    previewBox.width = previewSize;
+    previewBox.height = previewSize;
+    previewBox.style.width = `${previewSize}px`;
+    previewBox.style.height = `${previewSize}px`;
+  }
+
+  // Make scoreboard and touch controls fill panel width
+  const scoreboard = document.getElementById('scoreboard');
+  const touchControls = document.getElementById('touch-controls');
+  if (scoreboard) {
+    scoreboard.style.width = '100%';
+    scoreboard.style.boxSizing = 'border-box';
+  }
+  if (touchControls) {
+    touchControls.style.width = '100%';
+    touchControls.style.boxSizing = 'border-box';
+  }
+
+  draw();
+};
+
+// Override preview resizing: handled in resizeCanvas
+resizePreviewBox = function() {};
+
+// Override showGame to call scheduleResizeNow
+showGame = function() {
+  const wrapper = document.getElementById('tetris-wrapper');
+  if (wrapper) wrapper.style.display = 'flex';
+  setTimeout(() => { scheduleResizeNow(0); }, 0);
+};
 
 // ========== Fake BIOS Boot ==========
 
@@ -880,20 +939,6 @@ document.addEventListener('DOMContentLoaded', () => {
       setPauseState(!paused);
   });
 
-  // Fullscreen toggle button
-  const fsBtn = document.getElementById('fullscreen-btn');
-  if (fsBtn) {
-    fsBtn.addEventListener('click', () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen?.().catch(err => {
-          console.warn('Fullscreen request failed:', err);
-        });
-      } else {
-        document.exitFullscreen?.();
-      }
-    });
-  }
-
   // Boot sequence and start game
   fakeBootSequence(()=>{
     document.getElementById('tetris-toggle')?.addEventListener('click', () => {
@@ -928,15 +973,22 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('insert-coin')?.style.setProperty('display', 'none');
       document.getElementById('tetris-toggle')?.style.setProperty('display', 'none');
       resetGamepadPolling();
+
+      // Ensure correct initial sizing even if not fullscreen
+      scheduleResizeNow(0);
+      // Additional resize after UI settles (important on mobile)
+      scheduleResizeNow(300);
     };
   });
 
-  window.addEventListener('resize',()=>{ resizeCanvas(); });
-  window.addEventListener('load', () => { resizeCanvas(); });
-  // Add orientation change listener to handle device rotation on mobile
-  window.addEventListener('orientationchange', () => {
-    setTimeout(() => resizeCanvas(), 100);
-  });
+  // Bind fullscreen button
+  document.getElementById('fullscreen-btn')?.addEventListener('click', toggleFullscreen);
+
+  // Global resize/orientation/fullscreen events
+  window.addEventListener('resize', () => { scheduleResizeNow(50); });
+  window.addEventListener('orientationchange', () => { scheduleResizeNow(350); });
+  document.addEventListener('fullscreenchange', () => { scheduleResizeNow(50); });
+  window.addEventListener('load', () => { scheduleResizeNow(50); });
 
   // --- START THE GAMEPAD LOOP! ---
   startGamepadPolling();
