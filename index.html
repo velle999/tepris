@@ -89,13 +89,15 @@
     <button id="fullscreen-toggle" title="Fullscreen">⛶</button>
     <div id="insert-coin" style="position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-family:'Press Start 2P', monospace;font-size:20px;color:#0f0;text-shadow:0 0 3px #0f0;display:none;z-index:9998;">INSERT COIN</div>
     <div id="tetris-wrapper">
-      <canvas id="preview-box"></canvas>
+      <div id="left-rail"><canvas id="preview-box"></canvas>
+
+          <div id="scoreboard">
+            <div>Score: <span id="score">0</span></div>
+</div>
       <div id="game-area">
         <div id="tetris-container">
           <canvas id="tetris"></canvas>
           <div id="landing-preview"></div>
-          <div id="scoreboard">
-            <div>Score: <span id="score">0</span></div>
             <div>High Score: <span id="highScore">---</span></div>
             <div>Level: <span id="level">0</span></div>
             <div>Lines: <span id="lines">0</span></div>
@@ -265,6 +267,31 @@ $3('resize', ()=> setTimeout(fit, 0), {passive:true});
   window.addEventListener('resize', fitLandscape, {passive:true});
   window.addEventListener('orientationchange', ()=>setTimeout(fitLandscape, 60), {passive:true});
   document.addEventListener('DOMContentLoaded', fitLandscape);
+})();
+</script>
+
+
+<script id="fs-fix">
+(function(){
+  const btn = document.getElementById('fullscreen-toggle');
+  if (!btn) return;
+  function isFS(){ return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement); }
+  function reqFS(el){
+    (el.requestFullscreen && el.requestFullscreen())
+    || (el.webkitRequestFullscreen && el.webkitRequestFullscreen())
+    || (el.msRequestFullscreen && el.msRequestFullscreen());
+  }
+  function exitFS(){
+    (document.exitFullscreen && document.exitFullscreen())
+    || (document.webkitExitFullscreen && document.webkitExitFullscreen())
+    || (document.msExitFullscreen && document.msExitFullscreen());
+  }
+  btn.addEventListener('click', function(){
+    if (isFS()) exitFS(); else reqFS(document.documentElement);
+    // Re-fit after the transition
+    setTimeout(()=>window.dispatchEvent(new Event('resize')), 120);
+  }, {passive: true});
+  document.addEventListener('fullscreenchange', ()=> setTimeout(()=>window.dispatchEvent(new Event('resize')), 80));
 })();
 </script>
 

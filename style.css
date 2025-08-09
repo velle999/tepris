@@ -466,3 +466,29 @@ html, body {
   #fullscreen-toggle { position: fixed; top: 10px; right: 10px; z-index: 10050; }
 }
 
+
+
+/* === Mobile Landscape: Tight 3-column autofit === */
+@media (orientation: landscape) {
+  #game-area {
+    display: grid !important;
+    grid-template-columns: auto 1fr auto;
+    align-items: start;
+    justify-items: center;
+    gap: 6px;
+    width: 100%;
+  }
+  #left-rail { grid-column: 1; display: grid; grid-template-rows: auto auto; gap: 6px; align-items: start; }
+  #tetris-container { 
+    grid-column: 2 / span 2;
+    display: grid !important;
+    grid-template-columns: 1fr auto; /* board | controls */
+    align-items: start;
+    justify-items: center;
+    gap: 6px;
+  }
+  #tetris { grid-column: 1; }
+  #touch-controls { grid-column: 2; display: flex; flex-direction: column; gap: 6px; }
+  #fullscreen-toggle { position: fixed; top: 10px; right: 10px; z-index: 10050; }
+}
+
