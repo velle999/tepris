@@ -47,6 +47,12 @@ html, body {
   transition: all 0.3s ease;
 }
 
+/* Ensure overlay doesn’t block taps on mobile */
+#insert-coin {
+  /* Allow touches to pass through the insert-coin overlay so players can tap the coin button beneath it */
+  pointer-events: none;
+}
+
 #tetris-toggle:hover {
   background: #0ff;
   box-shadow: 0 0 16px #0ff;
@@ -57,57 +63,79 @@ html, body {
   display: none;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   background: #111;
   width: 100vw;
   height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  min-width: 100vw;
+  padding: 0;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 /* === Layout === */
 #game-area {
   display: flex;
-  flex-direction: row;
   gap: 12px;
-  align-items: flex-start;
+  flex-wrap: wrap;
   justify-content: center;
-  width: 100%;
-  height: 100%;
+  align-items: flex-start;
+  width: 100vw;
+  max-width: 100vw;
+  flex: 1;
+  max-height: 100vh;
   overflow: hidden;
   box-sizing: border-box;
+  padding: 0;
 }
 
 /* === Canvas & Container === */
 #tetris-container {
+  width: 100%;
+  max-width: 90vw;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
+  box-sizing: border-box;
   padding: 0;
   border: 4px ridge #0ff;
   background: repeating-linear-gradient(0deg, #000, #000 2px, #111 2px, #111 4px);
   box-shadow: 0 0 20px #0ff inset;
-  box-sizing: content-box;
+  margin: 0 auto;
 }
 
-/* ======= The main Tetris canvas. Its size is controlled by JavaScript. ======= */
+/* ======= CRITICAL: Fixes for canvas stretching/auto-sizing issues ======= */
 #tetris {
   display: block;
+  margin: 0 auto;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 10 / 20;
+  max-height: 65vh;
+  max-width: 100%;
   background: rgba(0, 0, 0, 0.85);
   border: 4px double #0ff;
   image-rendering: pixelated;
   box-shadow: 0 0 10px #0f0, 0 0 40px #0ff;
+  /* Prevent resizing bugs on load/OS window resize */
+  min-width: 200px;
+  min-height: 400px;
 }
 
 /* === Preview Box === */
-/* The preview box inside the info panel will be sized by JavaScript. */
-#info-panel #preview-box {
-  display: block;
+#preview-box {
+  width: 16vw;
+  height: 16vw;
+  max-width: 90px;
+  max-height: 90px;
+  aspect-ratio: 1 / 1;
   border: 2px dashed #0ff;
+  margin-bottom: 6px;
   background: rgba(0, 0, 0, 0.5);
   image-rendering: pixelated;
-  margin-bottom: 6px;
 }
 
 /* === Scoreboard === */
@@ -122,7 +150,7 @@ html, body {
   border-radius: 6px;
   text-shadow: 1px 1px 2px black;
   width: 100%;
-  box-sizing: border-box;
+  max-width: 300px;
 }
 
 #score, #level, #lines, #highScore {
@@ -139,7 +167,7 @@ html, body {
   margin-top: 10px;
   gap: 10px;
   width: 100%;
-  box-sizing: border-box;
+  max-width: 360px;
 }
 
 #touch-controls button {
@@ -156,39 +184,6 @@ html, body {
 #touch-controls button:hover {
   background: #00ffff;
   color: #000;
-}
-
-/* === Info Panel === */
-#info-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 0;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
-/* === Fullscreen Button === */
-#fullscreen-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  font-size: 1.5rem;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 8px;
-  background: #00ffff;
-  color: #000;
-  cursor: pointer;
-  box-shadow: 0 0 8px #0ff;
-  transition: background 0.2s ease, box-shadow 0.2s ease;
-  z-index: 6000;
-}
-
-#fullscreen-btn:hover {
-  background: #00aaff;
-  box-shadow: 0 0 12px #00aaff;
 }
 
 /* === Overlay === */
