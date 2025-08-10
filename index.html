@@ -92,18 +92,15 @@
     <div id="tetris-wrapper">
       <div id="game-area">
         <!-- Main game board -->
-<!-- LEFT: Preview -->
-<div id="left-panel">
+        <div id="tetris-container">
+          <canvas id="tetris"></canvas>
+          <div id="landing-preview"></div>
+        </div>
+        <!-- Info panel with preview, scoreboard and touch controls -->
+        <div id="left-panel">
   <canvas id="preview-box"></canvas>
 </div>
 
-<!-- MIDDLE: Main game board -->
-<div id="tetris-container">
-  <canvas id="tetris"></canvas>
-  <div id="landing-preview"></div>
-</div>
-
-<!-- RIGHT: Scoreboard (and touch controls only when portrait) -->
 <div id="right-panel">
   <div id="scoreboard">
     <div>Score: <span id="score">0</span></div>
@@ -111,8 +108,6 @@
     <div>Level: <span id="level">0</span></div>
     <div>Lines: <span id="lines">0</span></div>
   </div>
-
-  <!-- Keep touch controls here; we’ll hide them in landscape to avoid overlap -->
   <div id="touch-controls">
     <button id="left-btn">⬅️</button>
     <button id="rotate-btn">🔄</button>
@@ -145,5 +140,44 @@
 </div>
   <!-- Main Game Logic -->
   <script src="tepris.js"></script>
+
+<script>
+(function () {
+  const ASPECT = 1 / 2; // width:height for a 10x20 board
+
+  function resizeBoard() {
+    const canvas = document.getElementById('tetris');
+    const middle = document.getElementById('tetris-container');
+    if (!canvas || !middle) return;
+
+    const isMobileLandscape = window.matchMedia('(orientation: landscape)').matches &&
+                              window.innerWidth <= 900;
+
+    if (!isMobileLandscape) {
+      canvas.style.width = '';
+      canvas.style.height = '';
+      return;
+    }
+
+    const availW = middle.clientWidth;
+    const availH = middle.clientHeight;
+
+    let targetH = Math.min(availH, availW / ASPECT);
+    let targetW = targetH * ASPECT;
+
+    targetW = Math.floor(targetW);
+    targetH = Math.floor(targetH);
+
+    canvas.style.height = targetH + 'px';
+    canvas.style.width  = targetW + 'px';
+  }
+
+  ['DOMContentLoaded', 'load'].forEach(evt => window.addEventListener(evt, resizeBoard));
+  window.addEventListener('resize', resizeBoard, { passive: true });
+  window.addEventListener('orientationchange', resizeBoard);
+  window.teprisResizeBoard = resizeBoard;
+})();
+</script>
+
 </body>
 </html>

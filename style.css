@@ -369,7 +369,8 @@ html, body {
   border-top: 2px solid #088;
   margin: 12px 0 15px 0;
 }
-/* --- Mobile Landscape Layout: [Preview] [Board] [Scoreboard] --- */
+
+/* --- Mobile Landscape Layout: [Preview] [Board] [Scoreboard] with board autosize --- */
 @media (orientation: landscape) and (max-width: 900px) {
   #game-area {
     display: flex;
@@ -383,9 +384,7 @@ html, body {
     box-sizing: border-box;
   }
 
-  /* Panels on left and right shrink to fit, never forcing board down */
-  #left-panel,
-  #right-panel {
+  #left-panel, #right-panel {
     flex: 0 1 auto;
     display: flex;
     flex-direction: column;
@@ -394,7 +393,6 @@ html, body {
     max-width: 20%;
   }
 
-  /* Board gets priority and scales to fit available height */
   #tetris-container {
     flex: 1 1 auto;
     display: flex;
@@ -405,28 +403,40 @@ html, body {
   }
 
   #tetris {
-    height: 100%;
-    width: auto;
+    height: auto !important;
+    width: auto !important;
+    max-height: 100%;
+    max-width: 100%;
+    display: block;
   }
 
-  /* Preview and scoreboard scale down if needed */
   #preview-box {
     width: 100%;
     height: auto;
     max-width: 90px;
     max-height: 90px;
+    margin: 0;
   }
 
   #scoreboard {
     font-size: 0.9rem;
     padding: 6px 8px;
     width: 100%;
-    max-width: 140px;
+    max-width: 160px;
   }
 
-  /* Hide touch controls in landscape */
   #touch-controls {
     display: none !important;
   }
 }
 
+@media (orientation: landscape) and (max-width: 700px) {
+  #preview-box {
+    max-width: 78px;
+    max-height: 78px;
+  }
+  #scoreboard {
+    font-size: 0.85rem;
+    padding: 4px 6px;
+  }
+}
