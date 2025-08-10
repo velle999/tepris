@@ -92,28 +92,37 @@
     <div id="tetris-wrapper">
       <div id="game-area">
         <!-- Main game board -->
-        <div id="tetris-container">
-          <canvas id="tetris"></canvas>
-          <div id="landing-preview"></div>
-        </div>
-        <!-- Info panel with preview, scoreboard and touch controls -->
-        <div id="info-panel">
-          <canvas id="preview-box"></canvas>
-          <div id="scoreboard">
-            <div>Score: <span id="score">0</span></div>
-            <div>High&nbsp;Score: <span id="highScore">---</span></div>
-            <div>Level: <span id="level">0</span></div>
-            <div>Lines: <span id="lines">0</span></div>
-          </div>
-          <div id="touch-controls">
-            <button id="left-btn">⬅️</button>
-            <button id="rotate-btn">🔄</button>
-            <button id="right-btn">➡️</button>
-            <button id="down-btn">⬇️</button>
-            <button id="harddrop-btn">🟦 Hard Drop</button>
-            <button id="hold-btn">🧤 Pause</button>
-          </div>
-        </div>
+<!-- LEFT: Preview -->
+<div id="left-panel">
+  <canvas id="preview-box"></canvas>
+</div>
+
+<!-- MIDDLE: Main game board -->
+<div id="tetris-container">
+  <canvas id="tetris"></canvas>
+  <div id="landing-preview"></div>
+</div>
+
+<!-- RIGHT: Scoreboard (and touch controls only when portrait) -->
+<div id="right-panel">
+  <div id="scoreboard">
+    <div>Score: <span id="score">0</span></div>
+    <div>High&nbsp;Score: <span id="highScore">---</span></div>
+    <div>Level: <span id="level">0</span></div>
+    <div>Lines: <span id="lines">0</span></div>
+  </div>
+
+  <!-- Keep touch controls here; we’ll hide them in landscape to avoid overlap -->
+  <div id="touch-controls">
+    <button id="left-btn">⬅️</button>
+    <button id="rotate-btn">🔄</button>
+    <button id="right-btn">➡️</button>
+    <button id="down-btn">⬇️</button>
+    <button id="harddrop-btn">🟦 Hard Drop</button>
+    <button id="hold-btn">🧤 Pause</button>
+  </div>
+</div>
+
       </div>
     </div>
   </div>
