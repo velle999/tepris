@@ -97,27 +97,23 @@
           <div id="landing-preview"></div>
         </div>
         <!-- Info panel with preview, scoreboard and touch controls -->
-        <div id="left-panel">
-  <canvas id="preview-box"></canvas>
-</div>
-
-<div id="right-panel">
-  <div id="scoreboard">
-    <div>Score: <span id="score">0</span></div>
-    <div>High&nbsp;Score: <span id="highScore">---</span></div>
-    <div>Level: <span id="level">0</span></div>
-    <div>Lines: <span id="lines">0</span></div>
-  </div>
-  <div id="touch-controls">
-    <button id="left-btn">⬅️</button>
-    <button id="rotate-btn">🔄</button>
-    <button id="right-btn">➡️</button>
-    <button id="down-btn">⬇️</button>
-    <button id="harddrop-btn">🟦 Hard Drop</button>
-    <button id="hold-btn">🧤 Pause</button>
-  </div>
-</div>
-
+        <div id="info-panel">
+          <canvas id="preview-box"></canvas>
+          <div id="scoreboard">
+            <div>Score: <span id="score">0</span></div>
+            <div>High&nbsp;Score: <span id="highScore">---</span></div>
+            <div>Level: <span id="level">0</span></div>
+            <div>Lines: <span id="lines">0</span></div>
+          </div>
+          <div id="touch-controls">
+            <button id="left-btn">⬅️</button>
+            <button id="rotate-btn">🔄</button>
+            <button id="right-btn">➡️</button>
+            <button id="down-btn">⬇️</button>
+            <button id="harddrop-btn">🟦 Hard Drop</button>
+            <button id="hold-btn">🧤 Pause</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -140,44 +136,5 @@
 </div>
   <!-- Main Game Logic -->
   <script src="tepris.js"></script>
-
-<script>
-(function () {
-  const ASPECT = 1 / 2; // width:height for a 10x20 board
-
-  function resizeBoard() {
-    const canvas = document.getElementById('tetris');
-    const middle = document.getElementById('tetris-container');
-    if (!canvas || !middle) return;
-
-    const isMobileLandscape = window.matchMedia('(orientation: landscape)').matches &&
-                              window.innerWidth <= 900;
-
-    if (!isMobileLandscape) {
-      canvas.style.width = '';
-      canvas.style.height = '';
-      return;
-    }
-
-    const availW = middle.clientWidth;
-    const availH = middle.clientHeight;
-
-    let targetH = Math.min(availH, availW / ASPECT);
-    let targetW = targetH * ASPECT;
-
-    targetW = Math.floor(targetW);
-    targetH = Math.floor(targetH);
-
-    canvas.style.height = targetH + 'px';
-    canvas.style.width  = targetW + 'px';
-  }
-
-  ['DOMContentLoaded', 'load'].forEach(evt => window.addEventListener(evt, resizeBoard));
-  window.addEventListener('resize', resizeBoard, { passive: true });
-  window.addEventListener('orientationchange', resizeBoard);
-  window.teprisResizeBoard = resizeBoard;
-})();
-</script>
-
 </body>
 </html>
