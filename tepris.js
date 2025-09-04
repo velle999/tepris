@@ -585,7 +585,120 @@ function resetGamepadPolling() {
     }
 }
 
+// ========== Touch Controls (NEW & BUG-FREE) ==========
 
+// -- IDs of on-screen touch buttons --
+const TOUCH_BTN_IDS = [
+  'left-btn', 'right-btn', 'down-btn',
+  'rotate-btn', 'harddrop-btn', 'hold-btn'
+];
+function isTouchButtonEvent(e) {
+  function checkTarget(t) {
+    if (!t || !t.target) return false;
+    return TOUCH_BTN_IDS.some(id => {
+      const el = document.getElementById(id);
+      return el && (t.target === el || el.contains(t.target));
+    });
+  }
+  if (e.touches && e.touches.length)
+    for (let i = 0; i < e.touches.length; ++i)
+      if (checkTarget(e.touches[i])) return true;
+  if (e.changedTouches && e.changedTouches.length)
+    for (let i = 0; i < e.changedTouches.length; ++i)
+      if (checkTarget(e.changedTouches[i])) return true;
+  return checkTarget(e);
+}
+
+function addTouchControls() {
+  let startX = 0, startY = 0, moved = false, longPressTimer = null, lastTap = 0;
+  const threshold = 38, doubleTapGap = 320;
+
+  window.addEventListener('touchstart', e => {
+    if (!e.touches || e.touches.length > 2 || overlayMenuActive || isTouchButtonEvent(e)) return;
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY; moved = false;
+    longPressTimer = setTimeout(() => { navigator.vibrate?.(100); hardDrop(); }, 420);
+  }, { passive: false });
+
+  window.addEventListener('touchmove', e => {
+    if (!e.touches || e.touches.length > 2 || overlayMenuActive || isTouchButtonEvent(e)) return;
+    clearTimeout(longPressTimer);
+    const t = e.touches[0];
+    const dx = t.clientX - startX, dy = t.clientY - startY;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (Math.abs(dx) > threshold) {
+        moved = true;
+        navigator.vibrate?.(18);
+        if (dx > 0) movePiece('right');
+        else movePiece('left');
+        startX = t.clientX;
+      }
+    } else if (Math.abs(dy) > threshold && dy > 0) {
+      moved = true;
+      navigator.vibrate?.(10);
+      movePiece('down');
+      startY = t.clientY;
+    }
+  }, { passive: false });
+
+  window.addEventListener('touchend', e => {
+    if (isTouchButtonEvent(e)) return;
+    clearTimeout(longPressTimer);
+    if (e.changedTouches && e.changedTouches.length === 2) {
+      navigator.vibrate?.([30,30,30]);
+      hardDrop();
+      return;
+    }
+    if (moved) return;
+    const now = Date.now();
+    if (now - lastTap < doubleTapGap) {
+      setPauseState(!paused);
+      lastTap = 0;
+    } else {
+      navigator.vibrate?.(8);
+      rotatePiece(1);
+      lastTap = now;
+    }
+  }, { passive: false });
+
+  addTouchButtonListeners();
+}
+
+function addTouchButtonListeners() {
+  function bindTouchMouse(id, fn) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let lastTouch = 0;
+
+    el.addEventListener('touchstart', e => {
+      e.preventDefault();
+      lastTouch = Date.now();
+      fn();
+    }, { passive: false });
+
+    el.addEventListener('mousedown', e => {
+      if (Date.now() - lastTouch < 500) return;
+      e.preventDefault();
+      fn();
+    });
+  }
+
+  bindTouchMouse('left-btn', () => movePiece('left'));
+  bindTouchMouse('right-btn', () => movePiece('right'));
+  bindTouchMouse('down-btn', () => movePiece('down'));
+  bindTouchMouse('rotate-btn', () => rotatePiece(1));
+  bindTouchMouse('harddrop-btn', () => hardDrop());
+  bindTouchMouse('hold-btn', () => {
+    if (canHold) {
+      if (!hold) { hold = current; current = next; next = randomPiece(); }
+      else { [current, hold] = [hold, current]; }
+      pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
+      canHold = false;
+    } else {
+      setPauseState(!paused);
+    }
+  });
+}
 
 // ========== Overlay/Menu System ==========
 
