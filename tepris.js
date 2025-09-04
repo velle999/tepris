@@ -688,46 +688,66 @@ function addTouchControls() {
   }, { passive: false });
 
   // End
-  window.addEventListener('touchend', e => {
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-    }
+window.addEventListener('touchend', e => {
+  // Clear long press
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
 
-    // If we were on a button, ignore tap
-    if (isOnButton) {
-      reset();
-      return;
-    }
+  // Clear swipe repeat
+  if (swipeRepeatTimer) {
+    clearInterval(swipeRepeatTimer);
+    swipeRepeatTimer = null;
+  }
 
-    const now = Date.now();
-    const dx = e.changedTouches[0].clientX - startX;
-    const dy = e.changedTouches[0].clientY - startY;
-
-    // If moved significantly, don't count as tap
-    if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) {
-      const dt = now - lastTapTime;
-
-      if (dt < tapWindow) {
-        tapCount++;
-      } else {
-        tapCount = 1;
-      }
-
-      lastTapTime = now;
-
-      if (tapCount === 3) {
-        setPauseState(!paused);
-        navigator.vibrate?.(100);
-        tapCount = 0;
-      } else if (tapCount === 1) {
-        setTimeout(() => {
-          if (tapCount === 1) rotatePiece(1);
-        }, tapWindow);
-      }
-    }
-
+  // If started on button, ignore
+  if (isOnButton) {
     reset();
-  }, { passive: false });
+    return;
+  }
+
+  const now = Date.now();
+  const dx = e.changedTouches[0].clientX - startX;
+  const dy = e.changedTouches[0].clientY - startY;
+  const dt = now - lastTapTime;
+
+  // 🚫 Cancel rotate if: moved too much or held too long
+  const moved = Math.abs(dx) > 10 || Math.abs(dy) > 10;
+  const heldTooLong = dt > 250; // If touch lasted more than 250ms, likely not a tap
+
+  // Clear pending rotate
+  clearPendingRotate();
+
+  // Update tap count only if it was a real tap (not swipe/hold)
+  if (!moved && !heldTooLong) {
+    if (dt < tapWindow) {
+      tapCount++;
+    } else {
+      tapCount = 1;
+    }
+
+    lastTapTime = now;
+
+    if (tapCount === 3) {
+      setPauseState(!paused);
+      navigator.vibrate?.(100);
+      tapCount = 0;
+    } else if (tapCount === 1) {
+      // Only schedule rotate if it was a real tap
+      pendingRotateTimeout = setTimeout(() => {
+        navigator.vibrate?.(8);
+        rotatePiece(1);
+        pendingRotateTimeout = null;
+      }, 10); // Short delay just for timing safety
+    }
+  } else {
+    // Not a tap — don't rotate, don't count
+    tapCount = dt < tapWindow ? 1 : 0; // Reset logic
+  }
+
+  reset();
+}, { passive: false });
 
   addTouchButtonListeners();
 }
