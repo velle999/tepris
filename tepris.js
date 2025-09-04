@@ -386,6 +386,18 @@ function tryStartGame() {
     }
 }
 
+let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function initAudio() {
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume().then(() => console.log('Audio resumed.'));
+    }
+}
+
+// Make sure you call this inside a touch/click handler
+document.addEventListener('touchstart', initAudio, { once: true });
+document.addEventListener('mousedown', initAudio, { once: true });
+
 // ===== Keyboard Input =====
 document.addEventListener('keydown', e => {
     if (overlayMenuActive) {
