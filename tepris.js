@@ -849,142 +849,96 @@ function hideGameOverMenu() {
 function showGame() {
     const wrapper = document.getElementById('tetris-wrapper');
     if (wrapper) wrapper.style.display = 'flex';
-    setTimeout(() => {
-        resizeCanvas();
-        resizePreviewBox();
-        resizeOverlays();
-        resizeLayout();
-    }, 0);
+    setTimeout(() => { resizeCanvas(); resizeLayout(); resizeOverlays(); }, 0);
 }
 
+// ===== Canvas Resize =====
 function resizeCanvas() {
-    const container = document.getElementById('tetris-container') || document.body;
-    const vw = container.clientWidth;
-    const vh = window.innerHeight - 20; // small padding
+    const canvasEl = document.getElementById('tetris');
+    if (!canvasEl) return;
 
-    // Block size fits board in viewport
+    const vw = window.innerWidth;
+    const vh = window.innerHeight - 20;
+
+    // Fit board in viewport
     blockSize = Math.max(12, Math.min(40, Math.floor(Math.min(vw / COLS, vh / ROWS))));
 
-    canvas.width = blockSize * COLS;
-    canvas.height = blockSize * ROWS;
-    canvas.style.width = `${canvas.width}px`;
-    canvas.style.height = `${canvas.height}px`;
+    canvasEl.width = blockSize * COLS;
+    canvasEl.height = blockSize * ROWS;
+    canvasEl.style.width = `${canvasEl.width}px`;
+    canvasEl.style.height = `${canvasEl.height}px`;
 
-    // Center canvas
-    canvas.style.position = 'absolute';
-    canvas.style.left = `${(vw - canvas.width) / 2}px`;
-    canvas.style.top = `${(vh - canvas.height) / 2}px`;
+    canvasEl.style.position = 'static';
+    canvasEl.style.margin = '0 auto';
 
     draw();
 }
 
-function resizePreviewBox() {
-    const size = Math.min(window.innerWidth * 0.2, 150);
-    previewBox.width = size;
-    previewBox.height = size;
-    previewBox.style.width = `${size}px`;
-    previewBox.style.height = `${size}px`;
+// ===== Layout Resize (Portrait & Landscape) =====
+function resizeLayout() {
+    const gameArea = document.getElementById('game-area');
+    const container = document.getElementById('tetris-container');
+    const preview = document.getElementById('preview-box');
+    const infoPanel = document.getElementById('info-panel');
+
+    if (!gameArea || !container || !preview || !infoPanel) return;
+
+    const portrait = window.innerHeight > window.innerWidth;
+
+    gameArea.style.display = 'flex';
+    gameArea.style.alignItems = 'center';
+    gameArea.style.justifyContent = 'center';
+    gameArea.style.gap = '10px';
+
+    if (portrait) {
+        // Portrait: preview | board | score
+        gameArea.style.flexDirection = 'row';
+        preview.style.order = 0;
+        container.style.order = 1;
+        infoPanel.style.order = 2;
+
+        const sideScale = Math.min(window.innerWidth / 800, 0.6);
+        preview.style.transform = `scale(${sideScale})`;
+        infoPanel.style.transform = `scale(${sideScale})`;
+    } else {
+        // Landscape: board centered, side panels normal
+        gameArea.style.flexDirection = 'row';
+        preview.style.transform = '';
+        infoPanel.style.transform = '';
+        preview.style.order = '';
+        container.style.order = '';
+        infoPanel.style.order = '';
+    }
 }
 
+// ===== Overlay Resize (Pause/GameOver) =====
 function resizeOverlays() {
     ['pause-menu', 'gameover-menu'].forEach(id => {
         const menu = document.getElementById(id);
         if (!menu) return;
 
-        // Centering
         menu.style.position = 'absolute';
         menu.style.left = '50%';
         menu.style.top = '50%';
         menu.style.transform = 'translate(-50%, -50%)';
+        menu.style.maxHeight = `${window.innerHeight * 0.8}px`;
 
-        // Responsive sizing
-        const maxH = window.innerHeight * 0.8;
-        menu.style.maxHeight = `${maxH}px`;
-
-        // Auto-shrink content in portrait
         const portrait = window.innerHeight > window.innerWidth;
         if (portrait) {
-            const scaleFactor = Math.min(window.innerWidth / 400, 1); // baseline 400px
+            const scaleFactor = Math.min(window.innerWidth / 400, 1);
             menu.style.fontSize = `${14 * scaleFactor}px`;
             menu.style.padding = `${10 * scaleFactor}px`;
         } else {
-            // Reset for landscape
             menu.style.fontSize = '';
             menu.style.padding = '';
         }
     });
 }
 
-function resizeLayout() {
-    const container = document.getElementById('tetris-container');
-    const canvas = document.getElementById('game-canvas');
-    const preview = document.getElementById('preview-box');
-    const scorePanel = document.getElementById('info-panel');
-
-    if (!container || !canvas) return;
-
-    const portrait = window.innerHeight > window.innerWidth;
-
-    container.style.display = 'flex';
-    container.style.alignItems = 'center';
-    container.style.justifyContent = 'center';
-    container.style.gap = '10px';
-
-    if (portrait) {
-        // Portrait: preview | board | score
-        container.style.flexDirection = 'row';
-
-        if (preview) preview.style.order = 0;
-        canvas.style.order = 1;
-        if (scorePanel) scorePanel.style.order = 2;
-
-        // Shrink side panels
-        const sideScale = Math.min(window.innerWidth / 800, 0.6);
-        if (preview) preview.style.transform = `scale(${sideScale})`;
-        if (scorePanel) scorePanel.style.transform = `scale(${sideScale})`;
-    } else {
-        // Landscape: board centered
-        container.style.flexDirection = 'row';
-        if (preview) { preview.style.order = ''; preview.style.transform = ''; }
-        canvas.style.order = '';
-        if (scorePanel) { scorePanel.style.order = ''; scorePanel.style.transform = ''; }
-    }
-}
-
-
-// ===== Responsive listeners =====
+// ===== Window Resize =====
 window.addEventListener('resize', () => {
     resizeCanvas();
-    resizePreviewBox();
-    resizeOverlays();
     resizeLayout();
-});
-window.addEventListener('orientationchange', () => {
-    resizeCanvas();
-    resizePreviewBox();
-    resizeOverlays();
-    resizeLayout();
-});
-
-// ===== Overlay Menu Highlight =====
-function highlightOverlayMenuItem() {
-    overlayMenuItems.forEach((btn, idx) => {
-        if (btn) {
-            btn.classList.toggle('selected', idx === overlayMenuIndex);
-            if (idx === overlayMenuIndex) btn.focus();
-        }
-    });
-}
-
-// ===== Responsive =====
-window.addEventListener('resize', () => {
-    resizeCanvas();
-    resizePreviewBox();
-    resizeOverlays();
-});
-window.addEventListener('orientationchange', () => {
-    resizeCanvas();
-    resizePreviewBox();
     resizeOverlays();
 });
 
