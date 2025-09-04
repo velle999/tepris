@@ -12,7 +12,6 @@ html, body {
   overflow: hidden;
   touch-action: none;
   overscroll-behavior: none;
-  /* REMOVE position: fixed & display:flex here! Let the wrapper do layout. */
 }
 
 /* === Arcade Shell === */
@@ -91,7 +90,6 @@ html, body {
   box-sizing: border-box;
 }
 
-/* ======= The main Tetris canvas. Its size is controlled by JavaScript. ======= */
 #tetris {
   display: block;
   background: rgba(0, 0, 0, 0.85);
@@ -101,7 +99,6 @@ html, body {
 }
 
 /* === Preview Box === */
-/* The preview box inside the info panel will be sized by JavaScript. */
 #info-panel #preview-box {
   display: block;
   border: 2px dashed #0ff;
@@ -241,17 +238,51 @@ html, body {
   animation: blink 1s infinite;
 }
 
-/* === Responsive Tweaks === */
-@media (max-width: 600px) {
+/* === Portrait Mobile Full Vertical + Horizontal Centering === */
+@media (max-width: 600px) and (orientation: portrait) {
+  #tetris-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* vertical centering */
+    align-items: center;     /* horizontal centering */
+    height: 100vh;
+    width: 100vw;
+    padding: 0 5px;          /* optional breathing room */
+  }
+
+  #game-area {
+    flex-direction: column;      /* stack board + info vertically */
+    align-items: center;         /* horizontal centering */
+    justify-content: center;     /* vertical centering of content */
+    gap: 10px;
+    width: 100%;
+    height: auto;
+  }
+
   #tetris-container {
-    max-width: 98vw;
-    max-height: 99vh;
+    max-width: 90vw;
+    max-height: 65vh;  /* leave space for touch controls */
+    margin: 0 auto;
   }
 
   #tetris {
-    max-height: 60vh;
-    min-width: 120px;
-    min-height: 200px;
+    max-width: 100%;
+    max-height: 100%;
+    margin: 0 auto;
+  }
+
+  #touch-controls {
+    margin-top: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  #touch-controls button {
+    flex: 1 1 40%;
+    font-size: 1.8rem;
+    padding: 12px;
   }
 
   #preview-box {
@@ -266,10 +297,7 @@ html, body {
     font-size: 0.9rem;
     padding: 3px 4px;
     max-width: 240px;
-  }
-
-  #game-area {
-    gap: 8px;
+    margin-top: 4px;
   }
 }
 
@@ -328,6 +356,7 @@ html, body {
   transition: background 0.15s, color 0.15s, box-shadow 0.15s;
   box-shadow: 0 0 7px #0ff3 inset;
 }
+
 #pause-menu button:hover,
 #pause-menu button.selected,
 #pause-menu button:focus {
@@ -358,12 +387,14 @@ html, body {
   font-size: 1.22rem;
   letter-spacing: 0.13em;
 }
+
 #pause-menu .controls-row {
   margin-bottom: 5px;
   font-size: 1.02em;
   letter-spacing: 0.04em;
   line-height: 1.25;
 }
+
 #pause-menu hr {
   border: none;
   border-top: 2px solid #088;
