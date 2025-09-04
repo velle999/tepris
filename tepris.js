@@ -921,17 +921,34 @@ function resizeOverlays() {
         menu.style.left = '50%';
         menu.style.top = '50%';
         menu.style.transform = 'translate(-50%, -50%)';
-        menu.style.maxHeight = `${window.innerHeight * 0.8}px`;
+
+        const maxH = window.innerHeight * 0.8;
+        const maxW = window.innerWidth * 0.9;
+        menu.style.maxHeight = `${maxH}px`;
+        menu.style.maxWidth = `${maxW}px`;
 
         const portrait = window.innerHeight > window.innerWidth;
+        let scaleFactor = 1;
+
         if (portrait) {
-            const scaleFactor = Math.min(window.innerWidth / 400, 1);
-            menu.style.fontSize = `${14 * scaleFactor}px`;
-            menu.style.padding = `${10 * scaleFactor}px`;
+            // Calculate a scale factor to fit both width & height
+            const rect = menu.getBoundingClientRect();
+            const scaleX = maxW / rect.width;
+            const scaleY = maxH / rect.height;
+            scaleFactor = Math.min(scaleX, scaleY, 1);
+
+            // Apply scaling
+            menu.style.transform = `translate(-50%, -50%) scale(${scaleFactor})`;
+            menu.style.transformOrigin = 'center center';
         } else {
-            menu.style.fontSize = '';
-            menu.style.padding = '';
+            menu.style.transform = 'translate(-50%, -50%)';
         }
+
+        // Optional: scale font/padding proportionally
+        const baseFont = 14;
+        const basePadding = 10;
+        menu.style.fontSize = `${baseFont * scaleFactor}px`;
+        menu.style.padding = `${basePadding * scaleFactor}px`;
     });
 }
 
