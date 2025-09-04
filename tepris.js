@@ -585,96 +585,56 @@ function resetGamepadPolling() {
     }
 }
 
-// ===== Touch Controls & Universal Start =====
-const TOUCH_BTN_IDS = ['left-btn','right-btn','down-btn','rotate-btn','harddrop-btn','hold-btn'];
-function isTouchButtonEvent(e) {
-    function checkTarget(t) {
-        if (!t || !t.target) return false;
-        return TOUCH_BTN_IDS.some(id => { const el = document.getElementById(id); return el && (t.target===el || el.contains(t.target)); });
-    }
-    if (e.touches) for (let i=0;i<e.touches.length;i++) if (checkTarget(e.touches[i])) return true;
-    if (e.changedTouches) for (let i=0;i<e.changedTouches.length;i++) if (checkTarget(e.changedTouches[i])) return true;
-    return checkTarget(e);
-}
-
-window.addEventListener('touchstart', e => { if (!overlayMenuActive && !isTouchButtonEvent(e)) tryStartGame(); }, { passive:false });
-
-function bindStartButtons() {
-    document.querySelectorAll('.start-btn,#coin-btn').forEach(btn => { if (btn._startBound) return; btn.addEventListener('click', tryStartGame); btn._startBound=true; });
-    const tsb = document.getElementById('touch-start-btn');
-    if(tsb && !tsb._startBound){ tsb.addEventListener('touchstart', e=>{e.preventDefault();tryStartGame();},{passive:false}); tsb.addEventListener('mousedown', e=>{e.preventDefault();tryStartGame();}); tsb._startBound=true; }
-}
-if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bindStartButtons); else bindStartButtons();
-
-// ===== Touch Gestures =====
-function addTouchControls() {
-    let startX=0, startY=0, moved=false, longPressTimer=null, lastTap=0, tapCount=0, tapTimer=null;
-    let twoFingerDropLocked=false, twoFingerStartY=null;
-    const twoFingerThreshold=40, threshold=38, doubleTapGap=320;
-
-window.addEventListener('touchstart', e => {
-    if (!e.touches || e.touches.length > 2 || overlayMenuActive || isTouchButtonEvent(e)) return;
-    
-    e.preventDefault(); // 🛑 stops ghost click that causes double input
-    
-    tryStartGame();
-    const t = e.touches[0];
-    startX = t.clientX;
-    startY = t.clientY;
-    moved = false;
-
-    longPressTimer = setTimeout(() => {
-        navigator.vibrate?.(100);
-        hardDrop();
-    }, 420);
-
-    if (e.touches.length === 2) {
-        twoFingerStartY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        twoFingerDropLocked = false;
-    }
-}, { passive: false });
-
-    window.addEventListener('touchmove', e=>{
-        if(!e.touches||overlayMenuActive||isTouchButtonEvent(e)) return;
-        if(e.touches.length===1){
-            clearTimeout(longPressTimer);
-            const t=e.touches[0], dx=t.clientX-startX, dy=t.clientY-startY;
-            if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>threshold){ moved=true; navigator.vibrate?.(18); dx>0?movePiece('right'):movePiece('left'); startX=t.clientX; }
-            else if(Math.abs(dy)>threshold&&dy>0){ moved=true; navigator.vibrate?.(10); movePiece('down'); startY=t.clientY; }
-        }
-        if(e.touches.length===2&&!twoFingerDropLocked){
-            const avgY=(e.touches[0].clientY+e.touches[1].clientY)/2;
-            if((avgY-twoFingerStartY)>twoFingerThreshold){ hardDrop(); navigator.vibrate?.([30,30,30]); twoFingerDropLocked=true; }
-        }
-    }, {passive:false});
-
-    window.addEventListener('touchend', e=>{
-        if(isTouchButtonEvent(e)) return; clearTimeout(longPressTimer);
-        if(e.touches.length<2){ twoFingerDropLocked=false; twoFingerStartY=null; }
-        if(moved) return;
-        tapCount++; clearTimeout(tapTimer);
-        tapTimer=setTimeout(()=>{ if(tapCount<3) navigator.vibrate?.(8), rotatePiece(1); else navigator.vibrate?.([60,40,60]), setPauseState(!paused); tapCount=0; }, doubleTapGap);
-    }, {passive:false});
-
-    addTouchButtonListeners();
-}
-
 // ===== Touch Button Bindings =====
-function addTouchButtonListeners(){
-    function bindTouchMouse(id,startFn,endFn=null){
-        const el=document.getElementById(id); if(!el) return; let lastTouch=0;
-        function onStart(e){ e.preventDefault(); if(e.type==='mousedown'&&Date.now()-lastTouch<500) return; if(e.type==='touchstart') lastTouch=Date.now(); startFn(); el.classList.add('active'); }
-        function onEnd(e){ e.preventDefault(); if(endFn) endFn(); el.classList.remove('active'); }
-        el.addEventListener('touchstart', onStart,{passive:false}); el.addEventListener('touchend', onEnd,{passive:false}); el.addEventListener('touchcancel', onEnd,{passive:false}); el.addEventListener('mousedown', onStart); el.addEventListener('mouseup', onEnd);
+function addTouchButtonListeners() {
+    function bindTouchMouse(id, startFn, endFn = null) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        let lastTouch = 0;
+
+        function onStart(e) {
+            e.preventDefault();
+            // 🛑 Ignore ghost mousedown after touch
+            if (e.type === 'mousedown' && Date.now() - lastTouch < 500) return;
+            if (e.type === 'touchstart') lastTouch = Date.now();
+            startFn();
+            el.classList.add('active');
+        }
+
+        function onEnd(e) {
+            e.preventDefault();
+            // 🛑 Ignore ghost mouseup after touch
+            if (e.type === 'mouseup' && Date.now() - lastTouch < 500) return;
+            if (endFn) endFn();
+            el.classList.remove('active');
+        }
+
+        el.addEventListener('touchstart', onStart, { passive: false });
+        el.addEventListener('touchend', onEnd, { passive: false });
+        el.addEventListener('touchcancel', onEnd, { passive: false });
+        el.addEventListener('mousedown', onStart);
+        el.addEventListener('mouseup', onEnd);
     }
-    bindTouchMouse('left-btn',()=>startRepeat('left',true),()=>stopRepeat('left',true));
-    bindTouchMouse('right-btn',()=>startRepeat('right',true),()=>stopRepeat('right',true));
-    bindTouchMouse('down-btn',()=>startRepeat('down',true),()=>stopRepeat('down',true));
-    bindTouchMouse('rotate-btn',()=>rotatePiece(1));
-    bindTouchMouse('harddrop-btn',()=>hardDrop());
-    bindTouchMouse('hold-btn',()=>{
-        if(canHold){ if(!hold){hold=current; current=next; next=randomPiece();}else [current,hold]=[hold,current]; pos={x:((COLS/2)|0)-((current[0].length/2)|0),y:0}; canHold=false; }
-        else setPauseState(!paused);
+
+    bindTouchMouse('left-btn', () => startRepeat('left', true), () => stopRepeat('left', true));
+    bindTouchMouse('right-btn', () => startRepeat('right', true), () => stopRepeat('right', true));
+    bindTouchMouse('down-btn', () => startRepeat('down', true), () => stopRepeat('down', true));
+    bindTouchMouse('rotate-btn', () => rotatePiece(1));
+    bindTouchMouse('harddrop-btn', () => hardDrop());
+    bindTouchMouse('hold-btn', () => {
+        if (canHold) {
+            if (!hold) {
+                hold = current;
+                current = next;
+                next = randomPiece();
+            } else {
+                [current, hold] = [hold, current];
+            }
+            pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
+            canHold = false;
+        } else {
+            setPauseState(!paused);
+        }
     });
 }
 
