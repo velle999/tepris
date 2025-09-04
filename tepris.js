@@ -610,23 +610,22 @@ function isTouchButtonEvent(e) {
 }
 
 function addTouchControls() {
-  let startX = 0, startY = 0, moved = false;
-  const threshold = 15;
+  let startX = 0, startY = 0;
+  const swipeThreshold = 20;  // Minimum distance to count as swipe
   const longPressDelay = 400;
   let lastTapTime = 0;
   let tapCount = 0;
   const tapWindow = 300;
   let longPressTimer = null;
-  let isGestureBlocked = false; // Track if started on button
+  let isGestureBlocked = false; // true if started on a button
   let pendingRotateTimeout = null;
 
   function reset() {
-    moved = false;
-    isGestureBlocked = false;
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       longPressTimer = null;
     }
+    isGestureBlocked = false;
   }
 
   function clearPendingRotate() {
@@ -637,10 +636,13 @@ function addTouchControls() {
   }
 
   window.addEventListener('touchstart', e => {
+    // Prevent interaction if menu is open
+    if (overlayMenuActive) return;
+
     reset();
 
-    // Only block if single touch started on a button
-    if (e.touches.length === 1 && isTouchButtonEvent(e)) {
+    // Block if started on a button (prevents gesture interference)
+    if (isTouchButtonEvent(e)) {
       isGestureBlocked = true;
       return;
     }
@@ -649,61 +651,47 @@ function addTouchControls() {
     startX = t.clientX;
     startY = t.clientY;
 
-    // Start long press only if not on button
-    if (!isGestureBlocked) {
-      longPressTimer = setTimeout(() => {
-        navigator.vibrate?.(100);
-        hardDrop();
-        reset();
-      }, longPressDelay);
+    // Start long press timer (only if not on button)
+    longPressTimer = setTimeout(() => {
+      navigator.vibrate?.(100);
+      hardDrop();
+      reset();
+    }, longPressDelay);
 
-      // Optional: light haptic feedback on press start
-      navigator.vibrate?.([10, 30]);
-    }
-
+    // Prevent scroll during touch
     e.preventDefault();
   }, { passive: false });
 
   window.addEventListener('touchmove', e => {
-    if (overlayMenuActive || isGestureBlocked) return;
+    if (overlayMenuActive || isGestureBlocked || !e.touches[0]) return;
 
     const t = e.touches[0];
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
 
-    // If moved beyond threshold, cancel long press and allow swipe
-    if (!moved && (Math.abs(dx) > threshold || Math.abs(dy) > threshold)) {
-      moved = true;
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
+    // Only prevent default if we're going to act on it
+    e.preventDefault();
+
+    // Clear long press if movement exceeds threshold
+    if (longPressTimer && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+
+    // Horizontal swipe: stronger than vertical?
+    if (Math.abs(dx) > swipeThreshold && Math.abs(dx) > Math.abs(dy) / 2) {
+      if (Math.abs(dx) > swipeThreshold) {
+        navigator.vibrate?.(18);
+        movePiece(dx > 0 ? 'right' : 'left');
+        startX = t.clientX; // Reset for repeat swipe
       }
     }
 
-    // Horizontal swipe
-    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
-      navigator.vibrate?.(18);
-      movePiece(dx > 0 ? 'right' : 'left');
-      startX = t.clientX;
-      moved = true;
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-      }
-      e.preventDefault();
-    }
-
-    // Vertical swipe down
-    else if (dy > 40 && dy > Math.abs(dx)) {
+    // Downward swipe (can be combined if diagonal)
+    if (dy > swipeThreshold && dy > Math.abs(dx) / 2) {
       navigator.vibrate?.(10);
       movePiece('down');
       startY = t.clientY;
-      moved = true;
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-      }
-      e.preventDefault();
     }
   }, { passive: false });
 
@@ -714,13 +702,7 @@ function addTouchControls() {
       longPressTimer = null;
     }
 
-    // If we moved, don't do tap actions
-    if (moved) {
-      reset();
-      return;
-    }
-
-    // If started on button, ignore
+    // If started on button, ignore tap
     if (isGestureBlocked) {
       reset();
       return;
@@ -731,6 +713,7 @@ function addTouchControls() {
 
     clearPendingRotate();
 
+    // Tap counting
     if (dt < tapWindow) {
       tapCount++;
     } else {
@@ -739,7 +722,7 @@ function addTouchControls() {
 
     lastTapTime = now;
 
-    // === TRIPLE TAP → PAUSE ===
+    // Triple tap → pause
     if (tapCount === 3) {
       setPauseState(!paused);
       navigator.vibrate?.(100);
@@ -748,13 +731,17 @@ function addTouchControls() {
       return;
     }
 
-    // === SINGLE TAP → ROTATE ===
-    if (tapCount === 1) {
-      pendingRotateTimeout = setTimeout(() => {
-        navigator.vibrate?.(8);
-        rotatePiece(1);
-        pendingRotateTimeout = null;
-      }, tapWindow);
+    // Single tap → rotate (only if no significant move)
+    const dx = e.changedTouches?.[0] ? e.changedTouches[0].clientX - startX : 0;
+    const dy = e.changedTouches?.[0] ? e.changedTouches[0].clientY - startY : 0;
+    if (Math.abs(dx) < swipeThreshold && Math.abs(dy) < swipeThreshold) {
+      if (tapCount === 1) {
+        pendingRotateTimeout = setTimeout(() => {
+          navigator.vibrate?.(8);
+          rotatePiece(1);
+          pendingRotateTimeout = null;
+        }, tapWindow);
+      }
     }
 
     reset();
