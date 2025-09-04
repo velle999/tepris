@@ -88,7 +88,7 @@ html, body {
   border: 4px ridge #0ff;
   background: repeating-linear-gradient(0deg, #000, #000 2px, #111 2px, #111 4px);
   box-shadow: 0 0 20px #0ff inset;
-  box-sizing: content-box;
+  box-sizing: border-box;
 }
 
 /* ======= The main Tetris canvas. Its size is controlled by JavaScript. ======= */

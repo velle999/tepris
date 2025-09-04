@@ -389,6 +389,8 @@ document.addEventListener('keydown', (e) => {
   if (!running && (e.key === 'Enter' || e.code === 'Enter')) { window.startTetris?.(); return; }
   if (!running) return;
   if (e.key.toLowerCase() === 'p' || e.key === 'Enter') { paused = !paused; setPauseState(paused); return; }
+  if ((e.key==='Escape'||e.key.toLowerCase()==='p') && !overlayMenuActive)
+  setPauseState(!paused);
   if (paused || isFlashing) return;
   switch (e.key) {
     case 'ArrowLeft': movePiece('left'); break;
@@ -566,27 +568,35 @@ function addTouchControls() {
 }
 
 function addTouchButtonListeners() {
-  function bindTouchMouse(id, fn) {
+  function bindTouchMouse(id, startFn, endFn = null) {
     const el = document.getElementById(id);
     if (!el) return;
     let lastTouch = 0;
 
-    el.addEventListener('touchstart', e => {
+    function onStart(e) {
       e.preventDefault();
-      lastTouch = Date.now();
-      fn();
-    }, { passive: false });
+      if (e.type === 'mousedown' && Date.now() - lastTouch < 500) return;
+      if (e.type === 'touchstart') lastTouch = Date.now();
+      startFn();
+      el.classList.add('active');
+    }
 
-    el.addEventListener('mousedown', e => {
-      if (Date.now() - lastTouch < 500) return;
+    function onEnd(e) {
       e.preventDefault();
-      fn();
-    });
+      if (endFn) endFn();
+      el.classList.remove('active');
+    }
+
+    el.addEventListener('touchstart', onStart, { passive: false });
+    el.addEventListener('touchend', onEnd, { passive: false });
+    el.addEventListener('touchcancel', onEnd, { passive: false });
+    el.addEventListener('mousedown', onStart);
+    el.addEventListener('mouseup', onEnd);
   }
 
-  bindTouchMouse('left-btn', () => movePiece('left'));
-  bindTouchMouse('right-btn', () => movePiece('right'));
-  bindTouchMouse('down-btn', () => movePiece('down'));
+  bindTouchMouse('left-btn', () => startRepeat('left', true), () => stopRepeat('left', true));
+  bindTouchMouse('right-btn', () => startRepeat('right', true), () => stopRepeat('right', true));
+  bindTouchMouse('down-btn', () => startRepeat('down', true), () => stopRepeat('down', true));
   bindTouchMouse('rotate-btn', () => rotatePiece(1));
   bindTouchMouse('harddrop-btn', () => hardDrop());
   bindTouchMouse('hold-btn', () => {
@@ -933,11 +943,6 @@ document.addEventListener('DOMContentLoaded', () => {
     resetGamepadPolling();
   });
 
-  // Pause hotkey
-  document.addEventListener('keydown',(e)=>{
-    if ((e.key==='Escape'||e.key.toLowerCase()==='p') && !overlayMenuActive)
-      setPauseState(!paused);
-  });
 
   // Boot sequence and start game
   fakeBootSequence(()=>{
