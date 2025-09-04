@@ -665,27 +665,25 @@ window.addEventListener('touchmove', e => {
     longPressTimer = null;
   }
 
-  // 👉 HORIZONTAL SWIPE (Left/Right)
-  if (Math.abs(dx) > threshold && Math.abs(dx) > Math.abs(dy) / 2) {
-    const moveThreshold = 30; // px needed to trigger a move
-
-    if (dx > moveThreshold) {
-      movePiece('right');
-      navigator.vibrate?.(18);
-      startX = t.clientX; // Reset — requires new 30px to move again
-    } else if (dx < -moveThreshold) {
-      movePiece('left');
-      navigator.vibrate?.(18);
-      startX = t.clientX;
-    }
+// 👉 HORIZONTAL SWIPE
+if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy) / 2) {
+  if (dx > 30) {
+    movePiece('right');
+    navigator.vibrate?.(18);
+    startX = t.clientX;
+  } else if (dx < -30) {
+    movePiece('left');
+    navigator.vibrate?.(18);
+    startX = t.clientX;
   }
+}
 
-  // 👇 DOWN SWIPE
-  if (dy > 30 && dy > Math.abs(dx) / 2) {
-    movePiece('down');
-    navigator.vibrate?.(10);
-    startY = t.clientY; // Reset — requires new 30px down
-  }
+// 👇 DOWN SWIPE
+if (dy > 30 && dy > Math.abs(dx) / 2) {
+  movePiece('down');
+  navigator.vibrate?.(10);
+  startY = t.clientY;
+}
 }, { passive: false });
 
   // End
