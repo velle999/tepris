@@ -849,7 +849,12 @@ function hideGameOverMenu() {
 function showGame() {
     const wrapper = document.getElementById('tetris-wrapper');
     if (wrapper) wrapper.style.display = 'flex';
-    setTimeout(() => { resizeCanvas(); resizePreviewBox(); resizeOverlays(); }, 0);
+    setTimeout(() => {
+        resizeCanvas();
+        resizePreviewBox();
+        resizeOverlays();
+        resizeLayout();
+    }, 0);
 }
 
 function resizeCanvas() {
@@ -899,11 +904,7 @@ function resizeOverlays() {
         // Auto-shrink content in portrait
         const portrait = window.innerHeight > window.innerWidth;
         if (portrait) {
-            const scaleFactor = Math.min(
-                window.innerWidth / 400, // baseline width for menu
-                1
-            );
-
+            const scaleFactor = Math.min(window.innerWidth / 400, 1); // baseline 400px
             menu.style.fontSize = `${14 * scaleFactor}px`;
             menu.style.padding = `${10 * scaleFactor}px`;
         } else {
@@ -913,6 +914,80 @@ function resizeOverlays() {
         }
     });
 }
+
+function resizeLayout() {
+    const container = document.getElementById('tetris-container');
+    const preview = document.getElementById('preview-box');
+    const scorePanel = document.getElementById('info-panel');
+
+    if (!container) return;
+
+    const portrait = window.innerHeight > window.innerWidth;
+
+    if (portrait) {
+        // Portrait: [ preview | board | score ]
+        container.style.display = 'flex';
+        container.style.flexDirection = 'row';
+        container.style.justifyContent = 'center';
+        container.style.alignItems = 'center';
+        container.style.gap = '8px';
+
+        // Shrink side panels relative to board
+        const sideScale = Math.min(window.innerWidth / 800, 0.6); // auto scale, max 60%
+
+        if (preview) {
+            preview.style.order = 0;
+            preview.style.margin = '0';
+            preview.style.transform = `scale(${sideScale})`;
+            preview.style.transformOrigin = 'center';
+        }
+
+        if (canvas) {
+            canvas.style.order = 1;
+            canvas.style.flexShrink = '0';
+        }
+
+        if (scorePanel) {
+            scorePanel.style.order = 2;
+            scorePanel.style.margin = '0';
+            scorePanel.style.transform = `scale(${sideScale})`;
+            scorePanel.style.transformOrigin = 'center';
+        }
+    } else {
+        // Landscape: reset layout
+        container.style.display = 'flex';
+        container.style.flexDirection = 'row';
+        container.style.justifyContent = 'center';
+        container.style.alignItems = 'center';
+        container.style.gap = '12px';
+
+        if (preview) {
+            preview.style.order = '';
+            preview.style.transform = '';
+        }
+        if (canvas) {
+            canvas.style.order = '';
+        }
+        if (scorePanel) {
+            scorePanel.style.order = '';
+            scorePanel.style.transform = '';
+        }
+    }
+}
+
+// ===== Responsive listeners =====
+window.addEventListener('resize', () => {
+    resizeCanvas();
+    resizePreviewBox();
+    resizeOverlays();
+    resizeLayout();
+});
+window.addEventListener('orientationchange', () => {
+    resizeCanvas();
+    resizePreviewBox();
+    resizeOverlays();
+    resizeLayout();
+});
 
 // ===== Overlay Menu Highlight =====
 function highlightOverlayMenuItem() {
