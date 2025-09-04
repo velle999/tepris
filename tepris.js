@@ -684,51 +684,37 @@ function addTouchControls() {
     e.preventDefault(); // Prevent scroll during swipe
   }, { passive: false });
 
-window.addEventListener('touchend', e => {
-  if (isTouchButtonEvent(e)) return;
-  clearTimeout(longPressTimer);
+  window.addEventListener('touchend', e => {
+    // If any part of the gesture was on a button, exit early (except 2-finger)
+    if (isTouchButtonEvent(e) && (!e.touches || e.touches.length < 2)) {
+      clearTimeout(longPressTimer);
+      return;
+    }
 
-  // Two-finger tap = hard drop
-  if (e.changedTouches && e.changedTouches.length === 2) {
-    e.preventDefault();
-    navigator.vibrate?.([30, 30, 30]);
-    hardDrop();
-    return;
-  }
+    clearTimeout(longPressTimer);
 
-  if (moved) return;
+    // Two-finger tap = hard drop
+    if (e.changedTouches.length === 2) {
+      e.preventDefault();
+      navigator.vibrate?.([30, 30, 30]);
+      hardDrop();
+      return;
+    }
 
-  const now = Date.now();
-  const timeSinceLastTap = now - lastTap;
+    // Single finger: tap or double-tap
+    if (moved) return;
 
-  // We'll use a tap counter
-  if (timeSinceLastTap < doubleTapGap) {
-    // Second or third tap in quick succession
-    tapCount++;
-  } else {
-    // Reset if too slow
-    tapCount = 1;
-  }
-
-  if (tapCount === 3) {
-    // ✅ TRIPLE TAP = PAUSE
-    setPauseState(!paused);
-    lastTap = 0;
-    tapCount = 0;
-    navigator.vibrate?.(100); // Strong feedback for pause
-  } else if (tapCount === 1) {
-    // Single tap = rotate (only if not part of double/triple)
-    setTimeout(() => {
-      if (tapCount === 1) {
-        navigator.vibrate?.(8);
-        rotatePiece(1);
-      }
-    }, 50); // Small delay to see if more taps come
-  }
-  // If 2 taps, do nothing — waiting for third
-
-  lastTap = now;
-}, { passive: false });
+    const now = Date.now();
+    if (now - lastTap < doubleTapGap) {
+      e.preventDefault();
+      setPauseState(!paused);
+      lastTap = 0;
+    } else {
+      navigator.vibrate?.(8);
+      rotatePiece(1);
+      lastTap = now;
+    }
+  }, { passive: false });
 
   addTouchButtonListeners();
 }
