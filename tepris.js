@@ -882,15 +882,35 @@ function resizePreviewBox() {
 }
 
 function resizeOverlays() {
-    // Limit menu size to 80% height to prevent overflow in portrait
     ['pause-menu', 'gameover-menu'].forEach(id => {
         const menu = document.getElementById(id);
         if (!menu) return;
-        menu.style.maxHeight = `${window.innerHeight * 0.8}px`;
-        menu.style.overflowY = 'auto';
+
+        // Centering
+        menu.style.position = 'absolute';
         menu.style.left = '50%';
         menu.style.top = '50%';
         menu.style.transform = 'translate(-50%, -50%)';
+
+        // Responsive sizing
+        const maxH = window.innerHeight * 0.8;
+        menu.style.maxHeight = `${maxH}px`;
+
+        // Auto-shrink content in portrait
+        const portrait = window.innerHeight > window.innerWidth;
+        if (portrait) {
+            const scaleFactor = Math.min(
+                window.innerWidth / 400, // baseline width for menu
+                1
+            );
+
+            menu.style.fontSize = `${14 * scaleFactor}px`;
+            menu.style.padding = `${10 * scaleFactor}px`;
+        } else {
+            // Reset for landscape
+            menu.style.fontSize = '';
+            menu.style.padding = '';
+        }
     });
 }
 
