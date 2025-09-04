@@ -917,40 +917,63 @@ function resizeOverlays() {
 
 function resizeLayout() {
     const container = document.getElementById('tetris-container');
-    const canvas = document.getElementById('game-canvas');
     const preview = document.getElementById('preview-box');
     const scorePanel = document.getElementById('info-panel');
 
-    if (!container || !canvas) return;
+    if (!container) return;
 
     const portrait = window.innerHeight > window.innerWidth;
 
-    container.style.display = 'flex';
-    container.style.alignItems = 'center';
-    container.style.justifyContent = 'center';
-    container.style.gap = '10px';
-
     if (portrait) {
-        // Portrait: preview | board | score
+        // Portrait: [ preview | board | score ]
+        container.style.display = 'flex';
         container.style.flexDirection = 'row';
+        container.style.justifyContent = 'center';
+        container.style.alignItems = 'center';
+        container.style.gap = '8px';
 
-        if (preview) preview.style.order = 0;
-        canvas.style.order = 1;
-        if (scorePanel) scorePanel.style.order = 2;
+        // Shrink side panels relative to board
+        const sideScale = Math.min(window.innerWidth / 800, 0.6); // auto scale, max 60%
 
-        // Shrink side panels
-        const sideScale = Math.min(window.innerWidth / 800, 0.6);
-        if (preview) preview.style.transform = `scale(${sideScale})`;
-        if (scorePanel) scorePanel.style.transform = `scale(${sideScale})`;
+        if (preview) {
+            preview.style.order = 0;
+            preview.style.margin = '0';
+            preview.style.transform = `scale(${sideScale})`;
+            preview.style.transformOrigin = 'center';
+        }
+
+        if (canvas) {
+            canvas.style.order = 1;
+            canvas.style.flexShrink = '0';
+        }
+
+        if (scorePanel) {
+            scorePanel.style.order = 2;
+            scorePanel.style.margin = '0';
+            scorePanel.style.transform = `scale(${sideScale})`;
+            scorePanel.style.transformOrigin = 'center';
+        }
     } else {
-        // Landscape: board centered
+        // Landscape: reset layout
+        container.style.display = 'flex';
         container.style.flexDirection = 'row';
-        if (preview) { preview.style.order = ''; preview.style.transform = ''; }
-        canvas.style.order = '';
-        if (scorePanel) { scorePanel.style.order = ''; scorePanel.style.transform = ''; }
+        container.style.justifyContent = 'center';
+        container.style.alignItems = 'center';
+        container.style.gap = '12px';
+
+        if (preview) {
+            preview.style.order = '';
+            preview.style.transform = '';
+        }
+        if (canvas) {
+            canvas.style.order = '';
+        }
+        if (scorePanel) {
+            scorePanel.style.order = '';
+            scorePanel.style.transform = '';
+        }
     }
 }
-
 
 // ===== Responsive listeners =====
 window.addEventListener('resize', () => {
