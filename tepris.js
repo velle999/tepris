@@ -419,10 +419,21 @@ document.addEventListener('keydown', e => {
 });
 
 // ===== Gamepad Polling with Haptics =====
+// ===== Start Gamepad Polling =====
+function startGamepadPolling() {
+    if (!gamepadPollActive) {
+        gamepadPollActive = true;
+        lastButtonStates = [];
+        pollGamepad();
+    }
+}
+
 function pollGamepad() {
     if (!gamepadPollActive) return;
 
-    const gp = navigator.getGamepads?.()[0];
+    // --- Get first connected gamepad ---
+    const gamepads = navigator.getGamepads?.();
+    const gp = Array.from(gamepads).find(g => g); // skip nulls
     if (!gp) return requestAnimationFrame(pollGamepad);
 
     // --- Start game if not running ---
