@@ -377,152 +377,294 @@ function promptInitialsModal(callback) {
   input.addEventListener('keydown', onKeyDown);
 }
 
-// ========== Input Handling (Keyboard + Gamepad + Touch) ==========
-
-// --- Keyboard ---
-document.addEventListener('keydown', e => {
-  if (overlayMenuActive) {
-    if (e.key === "ArrowDown") { overlayMenuIndex = (overlayMenuIndex + 1) % overlayMenuItems.length; highlightOverlayMenuItem(); e.preventDefault(); }
-    if (e.key === "ArrowUp") { overlayMenuIndex = (overlayMenuIndex - 1 + overlayMenuItems.length) % overlayMenuItems.length; highlightOverlayMenuItem(); e.preventDefault(); }
-    if (e.key === "Enter" || e.key === " ") { overlayMenuItems[overlayMenuIndex].click(); e.preventDefault(); }
-    return;
-  }
-
-  if (!running && e.key === 'Enter') { window.startTetris?.(); return; }
-  if (!running) return;
-
-  if (e.key.toLowerCase() === 'p') { paused = !paused; setPauseState(paused); return; }
-  if (paused || isFlashing) return;
-
-  switch (e.key) {
-    case 'ArrowLeft': movePiece('left'); break;
-    case 'ArrowRight': movePiece('right'); break;
-    case 'ArrowDown': movePiece('down'); break;
-    case 'ArrowUp': rotatePiece(1); break;
-    case ' ': hardDrop(); break;
-    case 'Shift':
-      if (!canHold) break;
-      if (!hold) { hold = current; current = next; next = randomPiece(); }
-      else { [current, hold] = [hold, current]; }
-      pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
-      canHold = false;
-      break;
-  }
-});
-
-// --- Gamepad ---
-function pollGamepad() {
-  if (!gamepadPollActive) return;
-  const gp = navigator.getGamepads?.()[0];
-  if (!gp) return requestAnimationFrame(pollGamepad);
-
-  if (!running) {
-    const anyPressed = gp.buttons.some((b, idx) => b.pressed && !lastButtonStates[idx]) ||
-                       (Math.abs(gp.axes[0]) > 0.5 && !lastButtonStates._stickX) ||
-                       (Math.abs(gp.axes[1]) > 0.5 && !lastButtonStates._stickY);
-    if (anyPressed) window.startTetris?.();
-  } else if (!paused) {
-    const axes = { left: gp.axes[0] < -0.5, right: gp.axes[0] > 0.5, down: gp.axes[1] > 0.5 };
-    if (gp.buttons[15]?.pressed) startRepeat('right', true); else stopRepeat('right', true);
-    if (gp.buttons[13]?.pressed) startRepeat('down', true); else stopRepeat('down', true);
-    if (axes.left) startRepeat('left', false); else stopRepeat('left', false);
-    if (axes.right) startRepeat('right', false); else stopRepeat('right', false);
-    if (axes.down) startRepeat('down', false); else stopRepeat('down', false);
-
-    gp.buttons.forEach((btn, idx) => {
-      const justPressed = btn.pressed && !lastButtonStates[idx];
-      if (!justPressed) return;
-      switch(idx) {
-        case 0: rotatePiece(1); break;
-        case 1: hardDrop(); break;
-        case 2:
-          if (!canHold) break;
-          if (!hold) { hold = current; current = next; next = randomPiece(); }
-          else { [current, hold] = [hold, current]; }
-          pos = { x: ((COLS / 2)|0) - ((current[0].length/2)|0), y: 0 };
-          canHold = false;
-          break;
-        case 3: movePiece('down'); break;
-        case 9: setPauseState(!paused); break;
-      }
-    });
-
-    lastButtonStates._stickLeft = axes.left;
-    lastButtonStates._stickRight = axes.right;
-    lastButtonStates._stickDown = axes.down;
-  }
-
-  lastButtonStates = gp.buttons.map(b => b.pressed);
-  requestAnimationFrame(pollGamepad);
+// ===== Universal Start Trigger =====
+function tryStartGame() {
+    if (!running) window.startTetris?.();
 }
 
-// --- Touch ---
+// ========== Keyboard Input ==========
+document.addEventListener('keydown', e => {
+    if (overlayMenuActive) {
+        if (e.key === "ArrowDown") { overlayMenuIndex = (overlayMenuIndex + 1) % overlayMenuItems.length; highlightOverlayMenuItem(); e.preventDefault(); }
+        if (e.key === "ArrowUp") { overlayMenuIndex = (overlayMenuIndex - 1 + overlayMenuItems.length) % overlayMenuItems.length; highlightOverlayMenuItem(); e.preventDefault(); }
+        if (e.key === "Enter" || e.key === " ") { overlayMenuItems[overlayMenuIndex].click(); e.preventDefault(); }
+        return;
+    }
+
+    tryStartGame(); // attempt to start game if not running
+
+    if (!running) return;
+
+    if (e.key.toLowerCase() === 'p' || e.key === 'Enter') { paused = !paused; setPauseState(paused); return; }
+    if ((e.key==='Escape'||e.key.toLowerCase()==='p') && !overlayMenuActive) setPauseState(!paused);
+    if (paused || isFlashing) return;
+
+    switch (e.key) {
+        case 'ArrowLeft': movePiece('left'); break;
+        case 'ArrowRight': movePiece('right'); break;
+        case 'ArrowDown': movePiece('down'); break;
+        case 'ArrowUp': rotatePiece(1); break;
+        case ' ': hardDrop(); break;
+        case 'Shift':
+            if (!canHold) break;
+            if (!hold) { hold = current; current = next; next = randomPiece(); }
+            else { [current, hold] = [hold, current]; }
+            pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
+            canHold = false;
+            break;
+    }
+});
+
+// ===== Gamepad Polling (Universal Start) =====
+function pollGamepad() {
+    if (!gamepadPollActive) return;
+
+    const gp = navigator.getGamepads?.()[0];
+    if (!gp) return requestAnimationFrame(pollGamepad);
+
+    // --- Start game if not running ---
+    const anyPressed = gp.buttons.some((b,i) => b.pressed && !lastButtonStates[i]) ||
+                       Math.abs(gp.axes[0]) > 0.5 || Math.abs(gp.axes[1]) > 0.5;
+    if (!running && anyPressed) window.startTetris?.();
+
+    if (!running) {
+        // just update lastButtonStates for next frame
+        lastButtonStates = gp.buttons.map(b => b.pressed);
+        lastButtonStates._stickX = Math.abs(gp.axes[0]) > 0.5;
+        lastButtonStates._stickY = Math.abs(gp.axes[1]) > 0.5;
+        lastButtonStates._stickLeft = gp.axes[0] < -0.5;
+        lastButtonStates._stickRight = gp.axes[0] > 0.5;
+        lastButtonStates._stickDown = gp.axes[1] > 0.5;
+        return requestAnimationFrame(pollGamepad);
+    }
+
+    if (!paused && running) {
+        // --- D-Pad and left stick repeat movement ---
+        if (gp.buttons[15]?.pressed) { if (!lastButtonStates[15]) startRepeat('right', true); } else stopRepeat('right', true);
+        if (gp.buttons[13]?.pressed) { if (!lastButtonStates[13]) startRepeat('down', true); } else stopRepeat('down', true);
+        if (gp.axes[0] < -0.5) { if (!lastButtonStates._stickLeft) startRepeat('left', false); } else stopRepeat('left', false);
+        if (gp.axes[0] > 0.5)  { if (!lastButtonStates._stickRight) startRepeat('right', false); } else stopRepeat('right', false);
+        if (gp.axes[1] > 0.5)  { if (!lastButtonStates._stickDown) startRepeat('down', false); } else stopRepeat('down', false);
+
+        // --- Face buttons ---
+        gp.buttons.forEach((btn, idx) => {
+            if (!lastButtonStates[idx]) lastButtonStates[idx] = false;
+            const justPressed = btn.pressed && !lastButtonStates[idx];
+
+            if (justPressed) {
+                switch(idx) {
+                    case 0: rotatePiece(1); break;       // A / Cross
+                    case 1: hardDrop(); break;           // B / Circle
+                    case 2:                             // X / Square
+                        if (canHold) {
+                            if (!hold) { hold = current; current = next; next = randomPiece(); }
+                            else [current, hold] = [hold, current];
+                            pos = { x: ((COLS/2)|0) - ((current[0].length/2)|0), y: 0 };
+                            canHold = false;
+                        }
+                        break;
+                    case 3: movePiece('down'); break;   // Y / Triangle
+                    case 9: setPauseState(!paused); break; // Start
+                }
+            }
+
+            // update state for next frame
+            lastButtonStates[idx] = btn.pressed;
+        });
+
+        // --- Update stick state for next frame ---
+        lastButtonStates._stickLeft = gp.axes[0] < -0.5;
+        lastButtonStates._stickRight = gp.axes[0] > 0.5;
+        lastButtonStates._stickDown = gp.axes[1] > 0.5;
+    }
+
+    requestAnimationFrame(pollGamepad);
+}
+
+
+// --- Start polling ---
+function startGamepadPolling() {
+    if (!gamepadPollActive) {
+        gamepadPollActive = true;
+        requestAnimationFrame(pollGamepad);
+    }
+}
+
+
+// --- Coin / Start buttons ---
+document.querySelectorAll('.start-btn, #coin-btn').forEach(btn => {
+    btn.addEventListener('click', tryStartGame);
+});
+
+// ===== Touch Controls & Universal Start =====
+const TOUCH_BTN_IDS = [
+  'left-btn', 'right-btn', 'down-btn',
+  'rotate-btn', 'harddrop-btn', 'hold-btn'
+];
+
+// --- Helper: detect touch buttons ---
+function isTouchButtonEvent(e) {
+  function checkTarget(t) {
+    if (!t || !t.target) return false;
+    return TOUCH_BTN_IDS.some(id => {
+      const el = document.getElementById(id);
+      return el && (t.target === el || el.contains(t.target));
+    });
+  }
+  if (e.touches) for (let i = 0; i < e.touches.length; ++i) if (checkTarget(e.touches[i])) return true;
+  if (e.changedTouches) for (let i = 0; i < e.changedTouches.length; ++i) if (checkTarget(e.changedTouches[i])) return true;
+  return checkTarget(e);
+}
+
+// --- Universal start trigger ---
+function tryStartGame() {
+  if (!running) {
+    window.startTetris?.();
+    hidePauseMenu();
+    hideGameOverMenu();
+  }
+}
+
+// --- Bind start buttons (coin/start) ---
+function bindStartButtons() {
+  document.querySelectorAll('.start-btn, #coin-btn').forEach(btn => {
+    if (btn._startBound) return;
+    btn.addEventListener('click', tryStartGame);
+    btn._startBound = true;
+  });
+
+  const touchStartBtn = document.getElementById('touch-start-btn');
+  if (touchStartBtn && !touchStartBtn._startBound) {
+    touchStartBtn.addEventListener('touchstart', e => { e.preventDefault(); tryStartGame(); }, { passive: false });
+    touchStartBtn.addEventListener('mousedown', e => { e.preventDefault(); tryStartGame(); });
+    touchStartBtn._startBound = true;
+  }
+}
+
+// --- Call once DOM is ready ---
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bindStartButtons);
+} else bindStartButtons();
+
+// --- Start on any non-button touch ---
+window.addEventListener('touchstart', e => {
+  if (!overlayMenuActive && !isTouchButtonEvent(e)) tryStartGame();
+}, { passive: false });
+
+// ===== Touch controls gestures =====
 function addTouchControls() {
-  let startX=0, startY=0, moved=false, longPress=null;
-  let twoFingerDropLocked=false, twoFingerStartY=null;
-  const threshold=38, twoFingerThreshold=40, doubleTapGap=320;
-  let tapCount=0, tapTimer=null;
+  let startX = 0, startY = 0, moved = false, longPressTimer = null;
+  let lastTap = 0, tapCount = 0, tapTimer = null;
+
+  let twoFingerDropLocked = false;
+  let twoFingerStartY = null;
+  const twoFingerThreshold = 40;
+  const threshold = 38;
+  const doubleTapGap = 320;
 
   window.addEventListener('touchstart', e => {
-    if (!e.touches || e.touches.length>2 || overlayMenuActive || isTouchButtonEvent(e)) return;
+    if (!e.touches || e.touches.length > 2 || overlayMenuActive || isTouchButtonEvent(e)) return;
 
-    const t=e.touches[0];
-    startX=t.clientX; startY=t.clientY; moved=false;
+    tryStartGame(); // <-- start game on any touch
 
-    longPress=setTimeout(()=>{ navigator.vibrate?.(100); hardDrop(); }, 420);
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY; moved = false;
 
-    if(e.touches.length===2) { 
-      twoFingerStartY=(e.touches[0].clientY+e.touches[1].clientY)/2; 
-      twoFingerDropLocked=false; 
+    longPressTimer = setTimeout(() => { navigator.vibrate?.(100); hardDrop(); }, 420);
+
+    if (e.touches.length === 2) {
+      twoFingerStartY = (e.touches[0].clientY + e.touches[1].clientY)/2;
+      twoFingerDropLocked = false;
     }
-  }, {passive:false});
+  }, { passive: false });
 
   window.addEventListener('touchmove', e => {
     if (!e.touches || overlayMenuActive || isTouchButtonEvent(e)) return;
-    clearTimeout(longPress);
 
-    if (e.touches.length===1) {
-      const t=e.touches[0], dx=t.clientX-startX, dy=t.clientY-startY;
-      if (Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>threshold){ moved=true; navigator.vibrate?.(18); dx>0?movePiece('right'):movePiece('left'); startX=t.clientX; }
-      else if (Math.abs(dy)>threshold && dy>0){ moved=true; navigator.vibrate?.(10); movePiece('down'); startY=t.clientY; }
+    // Single-finger swipe
+    if (e.touches.length === 1) {
+      clearTimeout(longPressTimer);
+      const t = e.touches[0];
+      const dx = t.clientX - startX, dy = t.clientY - startY;
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > threshold) {
+        moved = true;
+        navigator.vibrate?.(18);
+        dx > 0 ? movePiece('right') : movePiece('left');
+        startX = t.clientX;
+      } else if (Math.abs(dy) > threshold && dy > 0) {
+        moved = true;
+        navigator.vibrate?.(10);
+        movePiece('down');
+        startY = t.clientY;
+      }
     }
 
-    if (e.touches.length===2 && !twoFingerDropLocked) {
-      const avgY=(e.touches[0].clientY+e.touches[1].clientY)/2;
-      if (avgY-twoFingerStartY>twoFingerThreshold){ hardDrop(); navigator.vibrate?.([30,30,30]); twoFingerDropLocked=true; }
+    // Two-finger hard drop
+    if (e.touches.length === 2 && !twoFingerDropLocked) {
+      const avgY = (e.touches[0].clientY + e.touches[1].clientY)/2;
+      if ((avgY - twoFingerStartY) > twoFingerThreshold) {
+        hardDrop();
+        navigator.vibrate?.([30,30,30]);
+        twoFingerDropLocked = true;
+      }
     }
-  }, {passive:false});
+  }, { passive: false });
 
   window.addEventListener('touchend', e => {
-    clearTimeout(longPress);
-    if (e.touches.length<2){ twoFingerDropLocked=false; twoFingerStartY=null; }
+    if (isTouchButtonEvent(e)) return;
+    clearTimeout(longPressTimer);
+
+    if (e.touches.length < 2) { twoFingerDropLocked = false; twoFingerStartY = null; }
     if (moved) return;
 
+    // Tap gestures
     tapCount++; clearTimeout(tapTimer);
-    tapTimer=setTimeout(()=>{
-      if(tapCount<3){ navigator.vibrate?.(8); rotatePiece(1); }
-      else { navigator.vibrate?.([60,40,60]); setPauseState(!paused); }
-      tapCount=0;
+    tapTimer = setTimeout(() => {
+      if (tapCount < 3) navigator.vibrate?.(8), rotatePiece(1);
+      else navigator.vibrate?.([60,40,60]), setPauseState(!paused);
+      tapCount = 0;
     }, doubleTapGap);
-  }, {passive:false});
+  }, { passive: false });
 
-  // --- Touch Buttons ---
-  TOUCH_BTN_IDS.forEach(id=>{
-    const el=document.getElementById(id);
-    if(!el) return;
-    let lastTouch=0;
-
-    function startFn(){ startRepeat(id.replace('-btn',''), true); }
-    function endFn(){ stopRepeat(id.replace('-btn',''), true); }
-
-    el.addEventListener('touchstart', e=>{ e.preventDefault(); lastTouch=Date.now(); startFn(); el.classList.add('active'); }, {passive:false});
-    el.addEventListener('touchend', e=>{ e.preventDefault(); endFn(); el.classList.remove('active'); }, {passive:false});
-    el.addEventListener('touchcancel', e=>{ e.preventDefault(); endFn(); el.classList.remove('active'); }, {passive:false});
-    el.addEventListener('mousedown', e=>{ e.preventDefault(); if(Date.now()-lastTouch<500) return; startFn(); el.classList.add('active'); });
-    el.addEventListener('mouseup', e=>{ e.preventDefault(); endFn(); el.classList.remove('active'); });
-  });
+  addTouchButtonListeners();
 }
 
+// ===== Touch button bindings =====
+function addTouchButtonListeners() {
+  function bindTouchMouse(id, startFn, endFn=null) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let lastTouch = 0;
+
+    function onStart(e) {
+      e.preventDefault();
+      if (e.type === 'mousedown' && Date.now() - lastTouch < 500) return;
+      if (e.type === 'touchstart') lastTouch = Date.now();
+      startFn(); el.classList.add('active');
+    }
+    function onEnd(e) { e.preventDefault(); if (endFn) endFn(); el.classList.remove('active'); }
+
+    el.addEventListener('touchstart', onStart, { passive:false });
+    el.addEventListener('touchend', onEnd, { passive:false });
+    el.addEventListener('touchcancel', onEnd, { passive:false });
+    el.addEventListener('mousedown', onStart);
+    el.addEventListener('mouseup', onEnd);
+  }
+
+  bindTouchMouse('left-btn',  () => startRepeat('left', true),  () => stopRepeat('left', true));
+  bindTouchMouse('right-btn', () => startRepeat('right', true), () => stopRepeat('right', true));
+  bindTouchMouse('down-btn',  () => startRepeat('down', true),  () => stopRepeat('down', true));
+  bindTouchMouse('rotate-btn', () => rotatePiece(1));
+  bindTouchMouse('harddrop-btn', () => hardDrop());
+  bindTouchMouse('hold-btn', () => {
+    if (canHold) {
+      if (!hold) { hold = current; current = next; next = randomPiece(); }
+      else [current, hold] = [hold, current];
+      pos = { x: ((COLS/2)|0) - ((current[0].length/2)|0), y:0 };
+      canHold = false;
+    } else setPauseState(!paused);
+  });
+}
 
 // ========== Overlay/Menu System ==========
 
