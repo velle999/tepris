@@ -611,32 +611,31 @@ function isTouchButtonEvent(e) {
 
 function addTouchControls() {
   let startX = 0, startY = 0;
-  const threshold = 10; // Very sensitive
+  const threshold = 10;
   let longPressTimer = null;
   let isOnButton = false;
   let tapCount = 0;
   let lastTapTime = 0;
-  const tapWindow = 300;
 
   function reset() {
-    if (longPressTimer) clearTimeout(longPressTimer);
-    longPressTimer = null;
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
     isOnButton = false;
   }
 
-  // Start
+  // === TOUCHSTART ===
   window.addEventListener('touchstart', e => {
     if (overlayMenuActive) return;
     reset();
 
-    // Check if started on a button
     isOnButton = isTouchButtonEvent(e);
 
     const t = e.touches[0];
     startX = t.clientX;
     startY = t.clientY;
 
-    // Start long press only if NOT on button
     if (!isOnButton) {
       longPressTimer = setTimeout(() => {
         navigator.vibrate?.(100);
@@ -644,168 +643,90 @@ function addTouchControls() {
       }, 400);
     }
 
-    // 🔥 CRITICAL: Prevent scroll
     e.preventDefault();
   }, { passive: false });
 
-  // Move
-window.addEventListener('touchmove', e => {
-  if (overlayMenuActive || isOnButton || !e.touches[0]) return;
+  // === TOUCHMOVE ===
+  window.addEventListener('touchmove', e => {
+    if (overlayMenuActive || isOnButton || !e.touches[0]) return;
 
-  const t = e.touches[0];
-  const dx = t.clientX - startX;
-  const dy = t.clientY - startY;
+    const t = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
 
-  // 🔥 Prevent scroll
-  e.preventDefault();
+    e.preventDefault();
 
-  // Cancel long press if any significant move
-  if (longPressTimer && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
-  }
+    if (longPressTimer && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
 
-// 👉 HORIZONTAL SWIPE
-if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy) / 2) {
-  if (dx > 30) {
-    movePiece('right');
-    navigator.vibrate?.(18);
-    startX = t.clientX;
-  } else if (dx < -30) {
-    movePiece('left');
-    navigator.vibrate?.(18);
-    startX = t.clientX;
-  }
-}
-
-// 👇 DOWN SWIPE
-if (dy > 30 && dy > Math.abs(dx) / 2) {
-  movePiece('down');
-  navigator.vibrate?.(10);
-  startY = t.clientY;
-}
-}, { passive: false });
-
-  // End
-// End
-window.addEventListener('touchend', e => {
-  // === CLEAN UP ===
-  if (longPressTimer) {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
-  }
-
-  // === IGNORE IF STARTED ON A BUTTON ===
-  if (isOnButton) {
-    reset();
-    return;
-  }
-
-  // === CHECK IF IT WAS A TAP (not a swipe) ===
-  const dx = e.changedTouches[0]?.clientX - startX || 0;
-  const dy = e.changedTouches[0]?.clientY - startY || 0;
-  const moveDistance = Math.hypot(dx, dy);
-
-  // If moved more than 15px, assume it was a swipe, not a tap
-  if (moveDistance > 15) {
-    reset();
-    return;
-  }
-
-  // === TAP DETECTION: Single or Triple ===
-  const now = Date.now();
-  const dt = now - lastTapTime;
-
-  // If taps are close together, count as multi-tap
-  if (dt < 300) {
-    tapCount++;
-  } else {
-    tapCount = 1;
-  }
-  lastTapTime = now;
-
-  // Reset after use
-  reset();
-
-  // === TRIPLE TAP → PAUSE ===
-  if (tapCount >= 3) {
-    setPauseState(!paused);
-    navigator.vibrate?.(100);
-    tapCount = 0;
-    return;
-  }
-
-  // === SINGLE TAP → ROTATE (after short delay for safety) ===
-  if (tapCount === 1) {
-    setTimeout(() => {
-      // Double-check not paused, etc.
-      if (!paused && running && !overlayMenuActive) {
-        navigator.vibrate?.(8);
-        rotatePiece(1);
+    // LEFT/RIGHT SWIPE
+    if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy) / 2) {
+      if (dx > 30) {
+        movePiece('right');
+        navigator.vibrate?.(18);
+        startX = t.clientX;
+      } else if (dx < -30) {
+        movePiece('left');
+        navigator.vibrate?.(18);
+        startX = t.clientX;
       }
-    }, 10);
-  }
+    }
 
-}, { passive: false });
+    // DOWN SWIPE
+    if (dy > 30 && dy > Math.abs(dx) / 2) {
+      movePiece('down');
+      navigator.vibrate?.(10);
+      startY = t.clientY;
+    }
+  }, { passive: false });
 
-// === CLEAN UP TIMERS ===
-  if (longPressTimer) {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
-  }
-  if (swipeRepeatTimer) {
-    clearInterval(swipeRepeatTimer);
-    swipeRepeatTimer = null;
-  }
-  clearPendingRotate(); // Cancel any pending rotate
+  // === TOUCHEND ===
+  window.addEventListener('touchend', e => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+    }
 
-  // === IGNORE IF STARTED ON BUTTON ===
-  if (isOnButton) {
+    if (isOnButton) {
+      reset();
+      return;
+    }
+
+    const dx = e.changedTouches[0]?.clientX - startX || 0;
+    const dy = e.changedTouches[0]?.clientY - startY || 0;
+    const moveDistance = Math.hypot(dx, dy);
+
+    if (moveDistance > 15) {
+      reset();
+      return;
+    }
+
+    const now = Date.now();
+    const dt = now - lastTapTime;
+
+    if (dt < 300) {
+      tapCount++;
+    } else {
+      tapCount = 1;
+    }
+    lastTapTime = now;
+
     reset();
-    return;
-  }
 
-  // === MEASURE GESTURE ===
-  const dx = e.changedTouches[0].clientX - startX;
-  const dy = e.changedTouches[0].clientY - startY;
-  const moveDistance = Math.hypot(dx, dy); // True distance moved
-  const isSignificantMove = moveDistance > 15;
-
-  // === NEVER ROTATE IF: moved significantly ===
-  if (isSignificantMove) {
-    reset();
-    return; // No tap, no rotate, no pause
-  }
-
-  // === CHECK FOR TRIPLE-TAP PAUSE ===
-  const now = Date.now();
-  const dt = now - lastTapTime;
-
-  if (dt < tapWindow) {
-    tapCount++;
-  } else {
-    tapCount = 1;
-  }
-
-  lastTapTime = now;
-
-  if (tapCount === 3) {
-    setPauseState(!paused);
-    navigator.vibrate?.(100);
-    tapCount = 0;
-  }
-
-  // === ONLY ROTATE IF: single tap, no move, not pausing ===
-  if (tapCount === 1) {
-    // Small delay just for visual feedback
-    setTimeout(() => {
-      navigator.vibrate?.(8);
-      rotatePiece(1);
-    }, 10);
-  }
-
-  reset();
-}, { passive: false });
+    if (tapCount >= 3) {
+      setPauseState(!paused);
+      navigator.vibrate?.(100);
+      tapCount = 0;
+    } else if (tapCount === 1) {
+      setTimeout(() => {
+        if (running && !paused && !overlayMenuActive) {
+          navigator.vibrate?.(8);
+          rotatePiece(1);
+        }
+      }, 10);
+    }
+  }, { passive: false });
 
   addTouchButtonListeners();
 }
