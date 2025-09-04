@@ -611,15 +611,18 @@ function isTouchButtonEvent(e) {
 
 function addTouchControls() {
   let startX = 0, startY = 0, moved = false;
-  const threshold = 15;          // For swipe detection
-  const longPressDelay = 400;    // ms to trigger hard drop
+  const threshold = 15;
+  const longPressDelay = 400;
   let lastTapTime = 0;
   let tapCount = 0;
   const tapWindow = 300;
   let longPressTimer = null;
+  let isGestureBlocked = false; // Track if started on button
+  let pendingRotateTimeout = null;
 
   function reset() {
     moved = false;
+    isGestureBlocked = false;
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       longPressTimer = null;
@@ -632,76 +635,93 @@ function addTouchControls() {
       pendingRotateTimeout = null;
     }
   }
-  let pendingRotateTimeout = null;
 
   window.addEventListener('touchstart', e => {
-    if (overlayMenuActive || isTouchButtonEvent(e)) return;
-    
     reset();
+
+    // Only block if single touch started on a button
+    if (e.touches.length === 1 && isTouchButtonEvent(e)) {
+      isGestureBlocked = true;
+      return;
+    }
 
     const t = e.touches[0];
     startX = t.clientX;
     startY = t.clientY;
 
-    // Start long press detection
-    longPressTimer = setTimeout(() => {
-      navigator.vibrate?.(100);
-      hardDrop();
-      reset();
-    }, longPressDelay);
+    // Start long press only if not on button
+    if (!isGestureBlocked) {
+      longPressTimer = setTimeout(() => {
+        navigator.vibrate?.(100);
+        hardDrop();
+        reset();
+      }, longPressDelay);
+
+      // Optional: light haptic feedback on press start
+      navigator.vibrate?.([10, 30]);
+    }
 
     e.preventDefault();
   }, { passive: false });
 
   window.addEventListener('touchmove', e => {
-    if (overlayMenuActive || !longPressTimer) return;
+    if (overlayMenuActive || isGestureBlocked) return;
 
     const t = e.touches[0];
-    const dx = Math.abs(t.clientX - startX);
-    const dy = Math.abs(t.clientY - startY);
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
 
-    // If moved beyond threshold, cancel long press
-    if (dx > threshold || dy > threshold) {
+    // If moved beyond threshold, cancel long press and allow swipe
+    if (!moved && (Math.abs(dx) > threshold || Math.abs(dy) > threshold)) {
       moved = true;
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
     }
 
-    // Optional: allow swipe during move
-    if (dx > 40 && dx > dy) {
+    // Horizontal swipe
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
       navigator.vibrate?.(18);
       movePiece(dx > 0 ? 'right' : 'left');
       startX = t.clientX;
       moved = true;
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
-    } else if (dy > 40 && dy > dx) {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+      e.preventDefault();
+    }
+
+    // Vertical swipe down
+    else if (dy > 40 && dy > Math.abs(dx)) {
       navigator.vibrate?.(10);
       movePiece('down');
       startY = t.clientY;
       moved = true;
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+      e.preventDefault();
     }
-
-    e.preventDefault();
   }, { passive: false });
 
   window.addEventListener('touchend', e => {
-    // Always clear long press on release
+    // Always clear long press
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       longPressTimer = null;
     }
 
-    // If was long press, already dropped — exit
+    // If we moved, don't do tap actions
     if (moved) {
       reset();
       return;
     }
 
-    // Ignore if started on a button
-    if (isTouchButtonEvent(e)) {
+    // If started on button, ignore
+    if (isGestureBlocked) {
       reset();
       return;
     }
@@ -728,7 +748,7 @@ function addTouchControls() {
       return;
     }
 
-    // === SINGLE TAP → ROTATE (after window) ===
+    // === SINGLE TAP → ROTATE ===
     if (tapCount === 1) {
       pendingRotateTimeout = setTimeout(() => {
         navigator.vibrate?.(8);
