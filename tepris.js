@@ -514,8 +514,13 @@ function isTouchButtonEvent(e) {
 function addTouchControls() {
   let startX = 0, startY = 0, moved = false, longPressTimer = null;
   let lastTap = 0, tapCount = 0, tapTimer = null;
-  let twoFingerDropActive = false, twoFingerStartY = null;
-  const threshold = 38, doubleTapGap = 320, twoFingerThreshold = 40;
+
+  // --- 2-finger swipe tracking ---
+  let twoFingerDropLocked = false;
+  let twoFingerStartY = null;
+  const twoFingerThreshold = 40;
+  const threshold = 38;
+  const doubleTapGap = 320;
 
   window.addEventListener('touchstart', e => {
     if (!e.touches || e.touches.length > 2 || overlayMenuActive || isTouchButtonEvent(e)) return;
@@ -530,16 +535,17 @@ function addTouchControls() {
       hardDrop();
     }, 420);
 
-    // reset 2-finger tracking if 2 fingers touch
+    // 2-finger gesture start
     if (e.touches.length === 2) {
       twoFingerStartY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      twoFingerDropLocked = false;
     }
   }, { passive: false });
 
   window.addEventListener('touchmove', e => {
     if (!e.touches || overlayMenuActive || isTouchButtonEvent(e)) return;
 
-    // --- Single-finger swipe for moves ---
+    // --- Single-finger swipe ---
     if (e.touches.length === 1) {
       clearTimeout(longPressTimer);
       const t = e.touches[0];
@@ -559,20 +565,15 @@ function addTouchControls() {
       }
     }
 
-    // --- 2-finger hard drop detection ---
-    if (e.touches.length === 2) {
-      const y0 = e.touches[0].clientY;
-      const y1 = e.touches[1].clientY;
-      const avgY = (y0 + y1) / 2;
-
-      if (twoFingerStartY === null) twoFingerStartY = avgY;
-
+    // --- 2-finger hard drop ---
+    if (e.touches.length === 2 && !twoFingerDropLocked) {
+      const avgY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
       const dy = avgY - twoFingerStartY;
 
-      if (!twoFingerDropActive && dy > twoFingerThreshold) {
-        navigator.vibrate?.([30, 30, 30]);
+      if (dy > twoFingerThreshold) {
         hardDrop();
-        twoFingerDropActive = true;
+        navigator.vibrate?.([30, 30, 30]);
+        twoFingerDropLocked = true;
       }
     }
   }, { passive: false });
@@ -581,16 +582,15 @@ function addTouchControls() {
     if (isTouchButtonEvent(e)) return;
     clearTimeout(longPressTimer);
 
-    // reset 2-finger drop when fewer than 2 fingers remain
+    // reset 2-finger tracking when fewer than 2 fingers remain
     if (e.touches.length < 2) {
-      twoFingerDropActive = false;
+      twoFingerDropLocked = false;
       twoFingerStartY = null;
     }
 
     if (moved) return;
 
-    // --- Single/double/triple tap handling ---
-    const now = Date.now();
+    // --- Single/double/triple tap ---
     tapCount++;
     clearTimeout(tapTimer);
 
