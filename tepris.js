@@ -1,6 +1,6 @@
 // ============================================================================
 //    TEPRIS ENGINE: RGB SLIDE + BG + FLASH LINES + GAMEPAD + BUG-FREE TOUCH
-//    2025 Velle & ChatGPT: Because normal Tetris is for cowards
+//    2025 Velle, ChatGPT & Qwen: Because normal Tetris is for cowards
 // ============================================================================
 
 const COLS = 10, ROWS = 20;
@@ -1136,20 +1136,26 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-      // --- Mobile Audio Unlock ---
+  // --- Mobile Audio Unlock ---
   function unlockAudio() {
-    if (bgMusic) {
-      bgMusic.muted = true;
-      let playPromise = bgMusic.play();
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          bgMusic.pause();
-          bgMusic.muted = false;
-        }).catch(err => {
-          console.warn("Unlock failed:", err);
-        });
+    try {
+      if (bgMusic) {
+        const playPromise = bgMusic.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            // If it started playing, stop it immediately until the game starts
+            bgMusic.pause();
+            bgMusic.currentTime = 0;
+          }).catch(err => {
+            console.warn("Unlock failed:", err);
+          });
+        }
       }
+    } catch (err) {
+      console.warn("Audio unlock error:", err);
     }
+
+    // Remove unlock listeners after first gesture
     window.removeEventListener('touchstart', unlockAudio);
     window.removeEventListener('pointerdown', unlockAudio);
     window.removeEventListener('keydown', unlockAudio);
@@ -1160,7 +1166,6 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('keydown', unlockAudio, { once: true });
   // --- End Mobile Audio Unlock ---
 
-  
     window.startTetris = function() {
 
       if (window.__teprisStarted) return;
