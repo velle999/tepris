@@ -1135,7 +1135,34 @@ document.addEventListener('DOMContentLoaded', () => {
         playSafe(bgMusic);
       }
     });
+
+      // --- Mobile Audio Unlock ---
+  function unlockAudio() {
+    if (bgMusic) {
+      bgMusic.muted = true;
+      let playPromise = bgMusic.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          bgMusic.pause();
+          bgMusic.muted = false;
+        }).catch(err => {
+          console.warn("Unlock failed:", err);
+        });
+      }
+    }
+    window.removeEventListener('touchstart', unlockAudio);
+    window.removeEventListener('pointerdown', unlockAudio);
+    window.removeEventListener('keydown', unlockAudio);
+  }
+
+  window.addEventListener('touchstart', unlockAudio, { once: true });
+  window.addEventListener('pointerdown', unlockAudio, { once: true });
+  window.addEventListener('keydown', unlockAudio, { once: true });
+  // --- End Mobile Audio Unlock ---
+
+  
     window.startTetris = function() {
+
       if (window.__teprisStarted) return;
       window.__teprisStarted = true;
       playSafe(startSound);
