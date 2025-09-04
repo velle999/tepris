@@ -625,66 +625,24 @@ function isTouchButtonEvent(e) {
 
 function addTouchControls() {
   let startX = 0, startY = 0, moved = false, lastTap = 0, tapCount = 0;
-  const threshold = 38, doubleTapGap = 320;
-  let isTwoFingerTap = false; // Track if current gesture is two-finger
+  const threshold = 38, doubleTapGap = 320; // Time window for triple-tap
 
-window.addEventListener('touchend', e => {
-  // After touch ends, check how many fingers are STILL down
-  const fingersStillDown = e.touches.length; // fingers still touching
-  const justLiftedCount = e.changedTouches.length;
+  window.addEventListener('touchstart', e => {
+    if (overlayMenuActive) return;
 
-  // If we were tracking a two-finger gesture and now all fingers are up
-  if (isTwoFingerTap && fingersStillDown === 0) {
-    e.preventDefault();
-    navigator.vibrate?.([30, 30, 30]);
-    hardDrop();
-    isTwoFingerTap = false;
-    return;
-  }
+    // Ignore if touching UI buttons (except for multi-finger gestures)
+    if (isTouchButtonEvent(e) && e.touches.length <= 1) return;
 
-  // Ignore if the touch started on a button
-  if (isTouchButtonEvent(e)) return;
+    if (e.touches.length > 2) return;
 
-  if (moved) return;
-
-  const now = Date.now();
-  const timeSinceLastTap = now - lastTap;
-
-  // Handle triple-tap
-  if (timeSinceLastTap < doubleTapGap) {
-    tapCount++;
-  } else {
-    tapCount = 1;
-  }
-
-  if (tapCount >= 3) {
-    setPauseState(!paused);
-    navigator.vibrate?.(100);
-    tapCount = 0;
-    lastTap = 0;
-  } else {
-    setTimeout(() => {
-      if (tapCount === 1) {
-        navigator.vibrate?.(8);
-        rotatePiece(1);
-      }
-    }, 50);
-  }
-
-  lastTap = now;
-  tapCount = timeSinceLastTap < doubleTapGap ? tapCount : 1;
-}, { passive: false });
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+    moved = false;
+  }, { passive: false });
 
   window.addEventListener('touchmove', e => {
     if (overlayMenuActive || e.touches.length > 2) return;
-
-    // If started as two-finger, block move to avoid conflict
-    if (isTwoFingerTap) {
-      e.preventDefault();
-      return;
-    }
-
-    // If moving over buttons, prevent scroll
     if (isTouchButtonEvent(e)) {
       e.preventDefault();
       return;
@@ -713,24 +671,22 @@ window.addEventListener('touchend', e => {
   }, { passive: false });
 
   window.addEventListener('touchend', e => {
-    // If this was a two-finger gesture, handle hard drop
-    if (isTwoFingerTap) {
+    if (isTouchButtonEvent(e)) return;
+
+    // === ✅ ONE HARD DROP ONLY: Two-finger tap ===
+    if (e.changedTouches.length === 2) {
       e.preventDefault();
       navigator.vibrate?.([30, 30, 30]);
       hardDrop();
-      isTwoFingerTap = false;
       return;
     }
-
-    // Ignore if the touch started on a button
-    if (isTouchButtonEvent(e)) return;
 
     if (moved) return;
 
     const now = Date.now();
     const timeSinceLastTap = now - lastTap;
 
-    // Handle triple-tap
+    // Handle triple-tap for pause
     if (timeSinceLastTap < doubleTapGap) {
       tapCount++;
     } else {
@@ -738,14 +694,16 @@ window.addEventListener('touchend', e => {
     }
 
     if (tapCount >= 3) {
+      // ✅ TRIPLE TAP = PAUSE
       setPauseState(!paused);
-      navigator.vibrate?.(100);
+      navigator.vibrate?.(100); // Strong feedback
       tapCount = 0;
       lastTap = 0;
     } else {
-      // Wait to see if more taps come
+      // Wait a tick to see if more taps come
       setTimeout(() => {
         if (tapCount === 1) {
+          // ✅ Single tap = rotate
           navigator.vibrate?.(8);
           rotatePiece(1);
         }
