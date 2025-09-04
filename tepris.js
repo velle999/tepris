@@ -1136,26 +1136,26 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-  // --- Mobile Audio Unlock ---
+  // --- Mobile Audio Unlock (global) ---
   function unlockAudio() {
-    try {
-      if (bgMusic) {
-        const playPromise = bgMusic.play();
+    const audios = document.querySelectorAll("audio");
+    audios.forEach(audio => {
+      try {
+        const playPromise = audio.play();
         if (playPromise !== undefined) {
           playPromise.then(() => {
-            // If it started playing, stop it immediately until the game starts
-            bgMusic.pause();
-            bgMusic.currentTime = 0;
-          }).catch(err => {
-            console.warn("Unlock failed:", err);
+            audio.pause();
+            audio.currentTime = 0; // reset so it's ready for real playback
+          }).catch(() => {
+            // Ignore expected play() block errors
           });
         }
+      } catch (err) {
+        console.warn("Audio unlock error:", err);
       }
-    } catch (err) {
-      console.warn("Audio unlock error:", err);
-    }
+    });
 
-    // Remove unlock listeners after first gesture
+    // Remove unlock listeners after first input
     window.removeEventListener('touchstart', unlockAudio);
     window.removeEventListener('pointerdown', unlockAudio);
     window.removeEventListener('keydown', unlockAudio);
@@ -1165,6 +1165,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('pointerdown', unlockAudio, { once: true });
   window.addEventListener('keydown', unlockAudio, { once: true });
   // --- End Mobile Audio Unlock ---
+
 
     window.startTetris = function() {
 
