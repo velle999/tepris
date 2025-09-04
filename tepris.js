@@ -687,8 +687,68 @@ if (dy > 30 && dy > Math.abs(dx) / 2) {
 }, { passive: false });
 
   // End
+// End
 window.addEventListener('touchend', e => {
-  // === CLEAN UP TIMERS ===
+  // === CLEAN UP ===
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+
+  // === IGNORE IF STARTED ON A BUTTON ===
+  if (isOnButton) {
+    reset();
+    return;
+  }
+
+  // === CHECK IF IT WAS A TAP (not a swipe) ===
+  const dx = e.changedTouches[0]?.clientX - startX || 0;
+  const dy = e.changedTouches[0]?.clientY - startY || 0;
+  const moveDistance = Math.hypot(dx, dy);
+
+  // If moved more than 15px, assume it was a swipe, not a tap
+  if (moveDistance > 15) {
+    reset();
+    return;
+  }
+
+  // === TAP DETECTION: Single or Triple ===
+  const now = Date.now();
+  const dt = now - lastTapTime;
+
+  // If taps are close together, count as multi-tap
+  if (dt < 300) {
+    tapCount++;
+  } else {
+    tapCount = 1;
+  }
+  lastTapTime = now;
+
+  // Reset after use
+  reset();
+
+  // === TRIPLE TAP → PAUSE ===
+  if (tapCount >= 3) {
+    setPauseState(!paused);
+    navigator.vibrate?.(100);
+    tapCount = 0;
+    return;
+  }
+
+  // === SINGLE TAP → ROTATE (after short delay for safety) ===
+  if (tapCount === 1) {
+    setTimeout(() => {
+      // Double-check not paused, etc.
+      if (!paused && running && !overlayMenuActive) {
+        navigator.vibrate?.(8);
+        rotatePiece(1);
+      }
+    }, 10);
+  }
+
+}, { passive: false });
+
+// === CLEAN UP TIMERS ===
   if (longPressTimer) {
     clearTimeout(longPressTimer);
     longPressTimer = null;
