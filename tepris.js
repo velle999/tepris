@@ -741,33 +741,45 @@ function addTouchControls() {
 }
 
 function addTouchButtonListeners() {
-  function bindTouchMouse(id, fn) {
+  function bindButton(id, fn) {
     const el = document.getElementById(id);
     if (!el) return;
-    let lastTouch = 0;
 
-    el.addEventListener('touchstart', e => {
-      e.preventDefault();
-      lastTouch = Date.now();
-      fn();
-    }, { passive: false });
+    function onPointerDown(e) {
+      e.preventDefault();  // Prevent scrolling, zoom, or mouse fallback
+      e.stopPropagation(); // Don't bubble up to window touch handlers
 
-    el.addEventListener('mousedown', e => {
-      if (Date.now() - lastTouch < 500) return;
-      e.preventDefault();
+      // Optional: visual feedback
+      el.classList.add('active');
+      setTimeout(() => el.classList.remove('active'), 150);
+
+      // Execute the action
       fn();
-    });
+    }
+
+    // Use pointerdown — handles touch, mouse, pen, but only ONCE
+    el.addEventListener('pointerdown', onPointerDown);
+
+    // Clean up visual state
+    el.addEventListener('pointerup', () => el.classList.remove('active'));
+    el.addEventListener('pointerout', () => el.classList.remove('active'));
+    el.addEventListener('pointercancel', () => el.classList.remove('active'));
   }
 
-  bindTouchMouse('left-btn', () => movePiece('left'));
-  bindTouchMouse('right-btn', () => movePiece('right'));
-  bindTouchMouse('down-btn', () => movePiece('down'));
-  bindTouchMouse('rotate-btn', () => rotatePiece(1));
-  bindTouchMouse('harddrop-btn', () => hardDrop());
-  bindTouchMouse('hold-btn', () => {
+  bindButton('left-btn', () => movePiece('left'));
+  bindButton('right-btn', () => movePiece('right'));
+  bindButton('down-btn', () => movePiece('down'));
+  bindButton('rotate-btn', () => rotatePiece(1));
+  bindButton('harddrop-btn', () => hardDrop());
+  bindButton('hold-btn', () => {
     if (canHold) {
-      if (!hold) { hold = current; current = next; next = randomPiece(); }
-      else { [current, hold] = [hold, current]; }
+      if (!hold) {
+        hold = current;
+        current = next;
+        next = randomPiece();
+      } else {
+        [current, hold] = [hold, current];
+      }
       pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
       canHold = false;
     } else {
