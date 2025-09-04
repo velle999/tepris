@@ -781,235 +781,67 @@ function addTouchButtonListeners() {
 
 // ========== Overlay/Menu System ==========
 
-// ===== Pause/Game State =====
 function setPauseState(state) {
-    paused = state;
-    if (paused) showPauseMenu();
-    else hidePauseMenu();
-    if (bgMusic) state ? bgMusic.pause() : bgMusic.play().catch(()=>{});
-    if (!state && running) requestAnimationFrame(update);
+  paused = state;
+  if (paused) showPauseMenu();
+  else hidePauseMenu();
+  if (bgMusic) state ? bgMusic.pause() : bgMusic.play().catch(()=>{});
+  if (!state && running) requestAnimationFrame(update);
 }
-
 function showPauseMenu() {
-    const menu = document.getElementById('pause-menu');
-    scheduleResizeNow(0);
-    menu.style.display = 'flex';
-    menu.style.flexDirection = 'column';
-    menu.style.justifyContent = 'center';
-    menu.style.alignItems = 'center';
-    menu.style.position = 'absolute';
-    menu.style.left = '50%';
-    menu.style.top = '50%';
-    menu.style.transform = 'translate(-50%, -50%)';
-    // Max height to avoid overflow in portrait
-    menu.style.maxHeight = `${window.innerHeight * 0.8}px`;
-    menu.style.overflowY = 'auto';
-
-    overlayMenuActive = true;
-    overlayMenuItems = PAUSE_MENU_ITEMS.map(id => document.getElementById(id));
-    overlayMenuIndex = 0;
-    highlightOverlayMenuItem();
-    requestAnimationFrame(pollOverlayMenuGamepad);
+  // When showing the pause menu, adjust the layout
+  scheduleResizeNow(0);
+  document.getElementById('pause-menu').style.display = 'block';
+  overlayMenuActive = true;
+  overlayMenuItems = PAUSE_MENU_ITEMS.map(id => document.getElementById(id));
+  overlayMenuIndex = 0;
+  highlightOverlayMenuItem();
+  requestAnimationFrame(pollOverlayMenuGamepad);
 }
-
 function hidePauseMenu() {
-    document.getElementById('pause-menu').style.display = 'none';
-    overlayMenuActive = false;
+  document.getElementById('pause-menu').style.display = 'none';
+  overlayMenuActive = false;
 }
-
 function showGameOverMenu() {
-    const scoreEl = document.getElementById('gameover-score');
-    scoreEl.textContent = `Score: ${score}`;
-    const menu = document.getElementById('gameover-menu');
-
-    menu.style.display = 'flex';
-    menu.style.flexDirection = 'column';
-    menu.style.justifyContent = 'center';
-    menu.style.alignItems = 'center';
-    menu.style.position = 'absolute';
-    menu.style.left = '50%';
-    menu.style.top = '50%';
-    menu.style.transform = 'translate(-50%, -50%)';
-    menu.style.maxHeight = `${window.innerHeight * 0.8}px`;
-    menu.style.overflowY = 'auto';
-
-    overlayMenuActive = true;
-    overlayMenuItems = [document.getElementById('restart-btn')];
-    overlayMenuIndex = 0;
-    highlightOverlayMenuItem();
-    requestAnimationFrame(pollOverlayMenuGamepad);
+  document.getElementById('gameover-score').textContent = `Score: ${score}`;
+  const gameoverMenu = document.getElementById('gameover-menu');
+  gameoverMenu.style.display = 'block';
+  overlayMenuActive = true;
+  overlayMenuItems = [document.getElementById('restart-btn')];
+  overlayMenuIndex = 0;
+  highlightOverlayMenuItem();
+  requestAnimationFrame(pollOverlayMenuGamepad);
 }
-
 function hideGameOverMenu() {
-    document.getElementById('gameover-menu').style.display = 'none';
-    overlayMenuActive = false;
+  document.getElementById('gameover-menu').style.display = 'none';
+  overlayMenuActive = false;
 }
-
-// ===== Show Game / Resize =====
 function showGame() {
-    const wrapper = document.getElementById('tetris-wrapper');
-    if (wrapper) wrapper.style.display = 'flex';
-    setTimeout(() => {
-        resizeCanvas();
-        resizePreviewBox();
-        resizeOverlays();
-        resizeLayout();
-    }, 0);
+  const wrapper = document.getElementById('tetris-wrapper');
+  if (wrapper) wrapper.style.display = 'flex';
+  setTimeout(() => { resizeCanvas(); resizePreviewBox(); }, 0);
 }
-
 function resizeCanvas() {
-    const container = document.getElementById('tetris-container') || document.body;
-    const vw = container.clientWidth;
-    const vh = window.innerHeight - 20; // small padding
-
-    // Block size fits board in viewport
-    blockSize = Math.max(12, Math.min(40, Math.floor(Math.min(vw / COLS, vh / ROWS))));
-
-    canvas.width = blockSize * COLS;
-    canvas.height = blockSize * ROWS;
-    canvas.style.width = `${canvas.width}px`;
-    canvas.style.height = `${canvas.height}px`;
-
-    // Center canvas
-    canvas.style.position = 'absolute';
-    canvas.style.left = `${(vw - canvas.width) / 2}px`;
-    canvas.style.top = `${(vh - canvas.height) / 2}px`;
-
-    draw();
+  const container = document.getElementById('tetris-container') || document.body;
+  const vw = container.clientWidth, vh = window.innerHeight - 160;
+  blockSize = Math.max(12, Math.min(40, Math.floor(Math.min(vw/COLS, vh/ROWS))));
+  canvas.width = blockSize*COLS; canvas.height = blockSize*ROWS;
+  canvas.style.width = `${canvas.width}px`; canvas.style.height = `${canvas.height}px`;
+  draw();
 }
-
 function resizePreviewBox() {
-    const size = Math.min(window.innerWidth * 0.2, 150);
-    previewBox.width = size;
-    previewBox.height = size;
-    previewBox.style.width = `${size}px`;
-    previewBox.style.height = `${size}px`;
+  const size = Math.min(window.innerWidth * 0.2, 150);
+  previewBox.width = size; previewBox.height = size;
+  previewBox.style.width = `${size}px`; previewBox.style.height = `${size}px`;
 }
-
-function resizeOverlays() {
-    ['pause-menu', 'gameover-menu'].forEach(id => {
-        const menu = document.getElementById(id);
-        if (!menu) return;
-
-        // Centering
-        menu.style.position = 'absolute';
-        menu.style.left = '50%';
-        menu.style.top = '50%';
-        menu.style.transform = 'translate(-50%, -50%)';
-
-        // Responsive sizing
-        const maxH = window.innerHeight * 0.8;
-        menu.style.maxHeight = `${maxH}px`;
-
-        // Auto-shrink content in portrait
-        const portrait = window.innerHeight > window.innerWidth;
-        if (portrait) {
-            const scaleFactor = Math.min(window.innerWidth / 400, 1); // baseline 400px
-            menu.style.fontSize = `${14 * scaleFactor}px`;
-            menu.style.padding = `${10 * scaleFactor}px`;
-        } else {
-            // Reset for landscape
-            menu.style.fontSize = '';
-            menu.style.padding = '';
-        }
-    });
-}
-
-function resizeLayout() {
-    const container = document.getElementById('tetris-container');
-    const preview = document.getElementById('preview-box');
-    const scorePanel = document.getElementById('info-panel');
-
-    if (!container) return;
-
-    const portrait = window.innerHeight > window.innerWidth;
-
-    if (portrait) {
-        // Portrait: [ preview | board | score ]
-        container.style.display = 'flex';
-        container.style.flexDirection = 'row';
-        container.style.justifyContent = 'center';
-        container.style.alignItems = 'center';
-        container.style.gap = '8px';
-
-        // Shrink side panels relative to board
-        const sideScale = Math.min(window.innerWidth / 800, 0.6); // auto scale, max 60%
-
-        if (preview) {
-            preview.style.order = 0;
-            preview.style.margin = '0';
-            preview.style.transform = `scale(${sideScale})`;
-            preview.style.transformOrigin = 'center';
-        }
-
-        if (canvas) {
-            canvas.style.order = 1;
-            canvas.style.flexShrink = '0';
-        }
-
-        if (scorePanel) {
-            scorePanel.style.order = 2;
-            scorePanel.style.margin = '0';
-            scorePanel.style.transform = `scale(${sideScale})`;
-            scorePanel.style.transformOrigin = 'center';
-        }
-    } else {
-        // Landscape: reset layout
-        container.style.display = 'flex';
-        container.style.flexDirection = 'row';
-        container.style.justifyContent = 'center';
-        container.style.alignItems = 'center';
-        container.style.gap = '12px';
-
-        if (preview) {
-            preview.style.order = '';
-            preview.style.transform = '';
-        }
-        if (canvas) {
-            canvas.style.order = '';
-        }
-        if (scorePanel) {
-            scorePanel.style.order = '';
-            scorePanel.style.transform = '';
-        }
-    }
-}
-
-// ===== Responsive listeners =====
-window.addEventListener('resize', () => {
-    resizeCanvas();
-    resizePreviewBox();
-    resizeOverlays();
-    resizeLayout();
-});
-window.addEventListener('orientationchange', () => {
-    resizeCanvas();
-    resizePreviewBox();
-    resizeOverlays();
-    resizeLayout();
-});
-
-// ===== Overlay Menu Highlight =====
 function highlightOverlayMenuItem() {
-    overlayMenuItems.forEach((btn, idx) => {
-        if (btn) {
-            btn.classList.toggle('selected', idx === overlayMenuIndex);
-            if (idx === overlayMenuIndex) btn.focus();
-        }
-    });
+  overlayMenuItems.forEach((btn, idx) => {
+    if (btn) {
+      btn.classList.toggle('selected', idx === overlayMenuIndex);
+      if (idx === overlayMenuIndex) btn.focus();
+    }
+  });
 }
-
-// ===== Responsive =====
-window.addEventListener('resize', () => {
-    resizeCanvas();
-    resizePreviewBox();
-    resizeOverlays();
-});
-window.addEventListener('orientationchange', () => {
-    resizeCanvas();
-    resizePreviewBox();
-    resizeOverlays();
-});
 
 // ========== Main Game Loop ==========
 
