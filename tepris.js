@@ -649,101 +649,101 @@ function addTouchControls() {
   }, { passive: false });
 
   // Move
-  window.addEventListener('touchmove', e => {
-    if (overlayMenuActive || isOnButton) return;
-    if (!e.touches[0]) return;
+window.addEventListener('touchmove', e => {
+  if (overlayMenuActive || isOnButton || !e.touches[0]) return;
 
-    const t = e.touches[0];
-    const dx = t.clientX - startX;
-    const dy = t.clientY - startY;
+  const t = e.touches[0];
+  const dx = t.clientX - startX;
+  const dy = t.clientY - startY;
 
-    // 🔥 CRITICAL: Prevent browser scroll
-    e.preventDefault();
+  // 🔥 Prevent scroll
+  e.preventDefault();
 
-    // Cancel long press if moved
-    if (longPressTimer && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
-      clearTimeout(longPressTimer);
-      longPressTimer = null;
-    }
-
-    // 👉 LEFT/RIGHT SWIPE
-    if (Math.abs(dx) > threshold && Math.abs(dx) > Math.abs(dy) / 2) {
-      if (dx > threshold) {
-        movePiece('right');
-        navigator.vibrate?.(18);
-        startX = t.clientX; // Reset for repeat
-      } else if (dx < -threshold) {
-        movePiece('left');
-        navigator.vibrate?.(18);
-        startX = t.clientX;
-      }
-    }
-
-    // 👇 DOWN SWIPE
-    if (dy > threshold && dy > Math.abs(dx) / 2) {
-      movePiece('down');
-      navigator.vibrate?.(10);
-      startY = t.clientY;
-    }
-  }, { passive: false });
-
-  // End
-window.addEventListener('touchend', e => {
-  // Clear long press
-  if (longPressTimer) {
+  // Cancel long press if any significant move
+  if (longPressTimer && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
     clearTimeout(longPressTimer);
     longPressTimer = null;
   }
 
-  // Clear swipe repeat
+  // 👉 HORIZONTAL SWIPE (Left/Right)
+  if (Math.abs(dx) > threshold && Math.abs(dx) > Math.abs(dy) / 2) {
+    const moveThreshold = 30; // px needed to trigger a move
+
+    if (dx > moveThreshold) {
+      movePiece('right');
+      navigator.vibrate?.(18);
+      startX = t.clientX; // Reset — requires new 30px to move again
+    } else if (dx < -moveThreshold) {
+      movePiece('left');
+      navigator.vibrate?.(18);
+      startX = t.clientX;
+    }
+  }
+
+  // 👇 DOWN SWIPE
+  if (dy > 30 && dy > Math.abs(dx) / 2) {
+    movePiece('down');
+    navigator.vibrate?.(10);
+    startY = t.clientY; // Reset — requires new 30px down
+  }
+}, { passive: false });
+
+  // End
+window.addEventListener('touchend', e => {
+  // === CLEAN UP TIMERS ===
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
   if (swipeRepeatTimer) {
     clearInterval(swipeRepeatTimer);
     swipeRepeatTimer = null;
   }
+  clearPendingRotate(); // Cancel any pending rotate
 
-  // If started on button, ignore
+  // === IGNORE IF STARTED ON BUTTON ===
   if (isOnButton) {
     reset();
     return;
   }
 
-  const now = Date.now();
+  // === MEASURE GESTURE ===
   const dx = e.changedTouches[0].clientX - startX;
   const dy = e.changedTouches[0].clientY - startY;
+  const moveDistance = Math.hypot(dx, dy); // True distance moved
+  const isSignificantMove = moveDistance > 15;
+
+  // === NEVER ROTATE IF: moved significantly ===
+  if (isSignificantMove) {
+    reset();
+    return; // No tap, no rotate, no pause
+  }
+
+  // === CHECK FOR TRIPLE-TAP PAUSE ===
+  const now = Date.now();
   const dt = now - lastTapTime;
 
-  // 🚫 Cancel rotate if: moved too much or held too long
-  const moved = Math.abs(dx) > 10 || Math.abs(dy) > 10;
-  const heldTooLong = dt > 250; // If touch lasted more than 250ms, likely not a tap
-
-  // Clear pending rotate
-  clearPendingRotate();
-
-  // Update tap count only if it was a real tap (not swipe/hold)
-  if (!moved && !heldTooLong) {
-    if (dt < tapWindow) {
-      tapCount++;
-    } else {
-      tapCount = 1;
-    }
-
-    lastTapTime = now;
-
-    if (tapCount === 3) {
-      setPauseState(!paused);
-      navigator.vibrate?.(100);
-      tapCount = 0;
-    } else if (tapCount === 1) {
-      // Only schedule rotate if it was a real tap
-      pendingRotateTimeout = setTimeout(() => {
-        navigator.vibrate?.(8);
-        rotatePiece(1);
-        pendingRotateTimeout = null;
-      }, 10); // Short delay just for timing safety
-    }
+  if (dt < tapWindow) {
+    tapCount++;
   } else {
-    // Not a tap — don't rotate, don't count
-    tapCount = dt < tapWindow ? 1 : 0; // Reset logic
+    tapCount = 1;
+  }
+
+  lastTapTime = now;
+
+  if (tapCount === 3) {
+    setPauseState(!paused);
+    navigator.vibrate?.(100);
+    tapCount = 0;
+  }
+
+  // === ONLY ROTATE IF: single tap, no move, not pausing ===
+  if (tapCount === 1) {
+    // Small delay just for visual feedback
+    setTimeout(() => {
+      navigator.vibrate?.(8);
+      rotatePiece(1);
+    }, 10);
   }
 
   reset();
