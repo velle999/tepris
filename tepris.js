@@ -610,55 +610,124 @@ function isTouchButtonEvent(e) {
 }
 
 function addTouchControls() {
-  let startX = 0, startY = 0, moved = false, longPressTimer = null, lastTap = 0;
-  const threshold = 38, doubleTapGap = 320;
+  let startX = 0, startY = 0, moved = false;
+  const threshold = 38;
+  let lastTapTime = 0;
+  let tapCount = 0;
+  const tapWindow = 300; // ms to detect triple-tap
+  let isTwoFingerGesture = false;
+
+  // Reset state
+  function reset() {
+    moved = false;
+    isTwoFingerGesture = false;
+  }
 
   window.addEventListener('touchstart', e => {
-    if (!e.touches || e.touches.length > 2 || overlayMenuActive || isTouchButtonEvent(e)) return;
-    const t = e.touches[0];
-    startX = t.clientX; startY = t.clientY; moved = false;
-    longPressTimer = setTimeout(() => { navigator.vibrate?.(100); hardDrop(); }, 420);
+    if (overlayMenuActive) return;
+    reset();
+
+    // Ignore single touches on buttons
+    if (e.touches.length === 1 && isTouchButtonEvent(e)) return;
+
+    // Capture start position for swiping
+    if (e.touches[0]) {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    }
+
+    // Detect two-finger gesture at start
+    if (e.touches.length >= 2) {
+      isTwoFingerGesture = true;
+    }
+
+    e.preventDefault();
   }, { passive: false });
 
   window.addEventListener('touchmove', e => {
-    if (!e.touches || e.touches.length > 2 || overlayMenuActive || isTouchButtonEvent(e)) return;
-    clearTimeout(longPressTimer);
+    if (overlayMenuActive) return;
+    if (isTwoFingerGesture) {
+      e.preventDefault(); // block scroll during two-finger
+      return;
+    }
+    if (isTouchButtonEvent(e)) {
+      e.preventDefault();
+      return;
+    }
+
     const t = e.touches[0];
-    const dx = t.clientX - startX, dy = t.clientY - startY;
-    if (Math.abs(dx) > Math.abs(dy)) {
-      if (Math.abs(dx) > threshold) {
-        moved = true;
-        navigator.vibrate?.(18);
-        if (dx > 0) movePiece('right');
-        else movePiece('left');
-        startX = t.clientX;
-      }
-    } else if (Math.abs(dy) > threshold && dy > 0) {
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > threshold) {
+      moved = true;
+      navigator.vibrate?.(18);
+      movePiece(dx > 0 ? 'right' : 'left');
+      startX = t.clientX; // allow repeat
+      e.preventDefault();
+    } else if (dy > threshold) {
       moved = true;
       navigator.vibrate?.(10);
       movePiece('down');
       startY = t.clientY;
+      e.preventDefault();
     }
   }, { passive: false });
 
   window.addEventListener('touchend', e => {
-    if (isTouchButtonEvent(e)) return;
-    clearTimeout(longPressTimer);
-    if (e.changedTouches && e.changedTouches.length === 2) {
-      navigator.vibrate?.([30,30,30]);
+    // === HARD DROP: Two-finger tap detected ===
+    if (isTwoFingerGesture && e.touches.length === 0) {
+      e.preventDefault();
+      navigator.vibrate?.([30, 30, 30]);
       hardDrop();
+      reset();
       return;
     }
-    if (moved) return;
-    const now = Date.now();
-    if (now - lastTap < doubleTapGap) {
-      setPauseState(!paused);
-      lastTap = 0;
-    } else {
-      navigator.vibrate?.(8);
-      rotatePiece(1);
-      lastTap = now;
+
+    // Ignore if started on a button
+    if (isTouchButtonEvent(e)) {
+      reset();
+      return;
     }
+
+    // === ROTATE or PAUSE: Only if no swipe happened ===
+    if (moved) {
+      reset();
+      return;
+    }
+
+    const now = Date.now();
+    const isDoubleOrTriple = now - lastTapTime < tapWindow;
+
+    if (isDoubleOrTriple) {
+      tapCount++;
+    } else {
+      tapCount = 1;
+    }
+
+    // --- Triple-tap: Pause ---
+    if (tapCount === 3) {
+      setPauseState(!paused);
+      navigator.vibrate?.(100);
+      lastTapTime = 0;
+      tapCount = 0;
+      reset();
+      return;
+    }
+
+    // --- Single tap: Rotate (if not part of triple) ---
+    if (tapCount === 1) {
+      // Use a tiny delay to wait for more taps
+      setTimeout(() => {
+        if (tapCount === 1) {
+          navigator.vibrate?.(8);
+          rotatePiece(1);
+        }
+      }, 50);
+    }
+
+    lastTapTime = now;
+    reset();
   }, { passive: false });
 
   addTouchButtonListeners();
