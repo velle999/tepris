@@ -931,6 +931,19 @@ document.addEventListener('DOMContentLoaded', () => {
   tetrisSound = document.getElementById('tetris-sound');
   startSound = coinSound;
   loadHighScore();
+  
+  // --- Mobile audio unlock ---
+  function initAudio() {
+    if (bgMusic) {
+      bgMusic.play().then(() => {
+        bgMusic.pause();
+        bgMusic.currentTime = 0;
+      }).catch(()=>{});
+    }
+  }
+
+  document.addEventListener("touchstart", initAudio, { once: true });
+  document.addEventListener("mousedown", initAudio, { once: true });
 
   // --- BG MUSIC AUTOSHUFLE LOGIC ---
   function setupBgMusicLoop() {
@@ -995,18 +1008,6 @@ document.addEventListener('DOMContentLoaded', () => {
     requestAnimationFrame(update);
     resetGamepadPolling();
   });
-
-let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-function initAudio() {
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume().then(() => console.log('Audio resumed.'));
-    }
-}
-
-// Make sure you call this inside a touch/click handler
-document.addEventListener('touchstart', initAudio, { once: true });
-document.addEventListener('mousedown', initAudio, { once: true });
 
   // Boot sequence and start game
   fakeBootSequence(()=>{
