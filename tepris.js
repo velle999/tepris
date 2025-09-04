@@ -592,35 +592,21 @@ const TOUCH_BTN_IDS = [
   'left-btn', 'right-btn', 'down-btn',
   'rotate-btn', 'harddrop-btn', 'hold-btn'
 ];
-
-/**
- * Check if the event originated from any touch button
- * @param {Event|Touch} t - Can be MouseEvent, TouchEvent, or Touch
- * @returns {boolean}
- */
 function isTouchButtonEvent(e) {
-  function checkTarget(target) {
-    if (!target) return false;
+  function checkTarget(t) {
+    if (!t || !t.target) return false;
     return TOUCH_BTN_IDS.some(id => {
       const el = document.getElementById(id);
-      return el && (target === el || el.contains(target));
+      return el && (t.target === el || el.contains(t.target));
     });
   }
-
-  // For Touch objects (from touches[] or changedTouches[])
-  if (e.target) return checkTarget(e.target);
-
-  if (e.touches && e.touches.length > 0) {
-    for (let i = 0; i < e.touches.length; i++) {
-      if (checkTarget(e.touches[i].target)) return true;
-    }
-  }
-  if (e.changedTouches && e.changedTouches.length > 0) {
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      if (checkTarget(e.changedTouches[i].target)) return true;
-    }
-  }
-  return false;
+  if (e.touches && e.touches.length)
+    for (let i = 0; i < e.touches.length; ++i)
+      if (checkTarget(e.touches[i])) return true;
+  if (e.changedTouches && e.changedTouches.length)
+    for (let i = 0; i < e.changedTouches.length; ++i)
+      if (checkTarget(e.changedTouches[i])) return true;
+  return checkTarget(e);
 }
 
 function addTouchControls() {
@@ -628,51 +614,24 @@ function addTouchControls() {
   const threshold = 38, doubleTapGap = 320;
 
   window.addEventListener('touchstart', e => {
-    // Prevent interaction if UI is blocked
-    if (overlayMenuActive) return;
-
-    // Ignore if touching UI buttons
-    if (isTouchButtonEvent(e)) {
-      // Allow two-finger gestures even on buttons
-      if (e.touches.length <= 1) return;
-    }
-
-    // Only allow 1 or 2 fingers
-    if (e.touches.length > 2) return;
-
+    if (!e.touches || e.touches.length > 2 || overlayMenuActive || isTouchButtonEvent(e)) return;
     const t = e.touches[0];
-    startX = t.clientX;
-    startY = t.clientY;
-    moved = false;
-
-    // Long-press = hard drop (only if not on button)
-    if (!isTouchButtonEvent(e)) {
-      longPressTimer = setTimeout(() => {
-        navigator.vibrate?.(100);
-        hardDrop();
-      }, 420);
-    }
+    startX = t.clientX; startY = t.clientY; moved = false;
+    longPressTimer = setTimeout(() => { navigator.vibrate?.(100); hardDrop(); }, 420);
   }, { passive: false });
 
   window.addEventListener('touchmove', e => {
-    if (overlayMenuActive || e.touches.length > 2) return;
-    if (isTouchButtonEvent(e)) {
-      e.preventDefault(); // Prevent scroll if dragging over buttons
-      return;
-    }
-
+    if (!e.touches || e.touches.length > 2 || overlayMenuActive || isTouchButtonEvent(e)) return;
     clearTimeout(longPressTimer);
     const t = e.touches[0];
-    const dx = t.clientX - startX;
-    const dy = t.clientY - startY;
-
+    const dx = t.clientX - startX, dy = t.clientY - startY;
     if (Math.abs(dx) > Math.abs(dy)) {
       if (Math.abs(dx) > threshold) {
         moved = true;
         navigator.vibrate?.(18);
         if (dx > 0) movePiece('right');
         else movePiece('left');
-        startX = t.clientX; // Reset for repeat swipe
+        startX = t.clientX;
       }
     } else if (Math.abs(dy) > threshold && dy > 0) {
       moved = true;
@@ -680,33 +639,19 @@ function addTouchControls() {
       movePiece('down');
       startY = t.clientY;
     }
-
-    e.preventDefault(); // Prevent scroll during swipe
   }, { passive: false });
 
   window.addEventListener('touchend', e => {
-    // If any part of the gesture was on a button, exit early (except 2-finger)
-    if (isTouchButtonEvent(e) && (!e.touches || e.touches.length < 2)) {
-      clearTimeout(longPressTimer);
-      return;
-    }
-
+    if (isTouchButtonEvent(e)) return;
     clearTimeout(longPressTimer);
-
-    // Two-finger tap = hard drop
-    if (e.changedTouches.length === 2) {
-      e.preventDefault();
-      navigator.vibrate?.([30, 30, 30]);
+    if (e.changedTouches && e.changedTouches.length === 2) {
+      navigator.vibrate?.([30,30,30]);
       hardDrop();
       return;
     }
-
-    // Single finger: tap or double-tap
     if (moved) return;
-
     const now = Date.now();
     if (now - lastTap < doubleTapGap) {
-      e.preventDefault();
       setPauseState(!paused);
       lastTap = 0;
     } else {
@@ -719,48 +664,34 @@ function addTouchControls() {
   addTouchButtonListeners();
 }
 
-/**
- * Use pointer events for buttons to avoid double inputs
- */
 function addTouchButtonListeners() {
-  function bindButton(id, fn) {
+  function bindTouchMouse(id, fn) {
     const el = document.getElementById(id);
     if (!el) return;
+    let lastTouch = 0;
 
-    function onPointerDown(e) {
-      e.preventDefault(); // No scroll, no mouse fallback
-      e.stopPropagation(); // Don't bubble to window touch handlers
-
-      // Visual feedback
-      el.classList.add('active');
-      setTimeout(() => el.classList.remove('active'), 150);
-
-      // Execute action
+    el.addEventListener('touchstart', e => {
+      e.preventDefault();
+      lastTouch = Date.now();
       fn();
-    }
+    }, { passive: false });
 
-    el.addEventListener('pointerdown', onPointerDown);
-
-    // Cleanup visual state
-    el.addEventListener('pointerup', () => el.classList.remove('active'));
-    el.addEventListener('pointerout', () => el.classList.remove('active'));
-    el.addEventListener('pointercancel', () => el.classList.remove('active'));
+    el.addEventListener('mousedown', e => {
+      if (Date.now() - lastTouch < 500) return;
+      e.preventDefault();
+      fn();
+    });
   }
 
-  bindButton('left-btn', () => movePiece('left'));
-  bindButton('right-btn', () => movePiece('right'));
-  bindButton('down-btn', () => movePiece('down'));
-  bindButton('rotate-btn', () => rotatePiece(1));
-  bindButton('harddrop-btn', () => hardDrop());
-  bindButton('hold-btn', () => {
+  bindTouchMouse('left-btn', () => movePiece('left'));
+  bindTouchMouse('right-btn', () => movePiece('right'));
+  bindTouchMouse('down-btn', () => movePiece('down'));
+  bindTouchMouse('rotate-btn', () => rotatePiece(1));
+  bindTouchMouse('harddrop-btn', () => hardDrop());
+  bindTouchMouse('hold-btn', () => {
     if (canHold) {
-      if (!hold) {
-        hold = current;
-        current = next;
-        next = randomPiece();
-      } else {
-        [current, hold] = [hold, current];
-      }
+      if (!hold) { hold = current; current = next; next = randomPiece(); }
+      else { [current, hold] = [hold, current]; }
       pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
       canHold = false;
     } else {
