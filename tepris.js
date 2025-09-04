@@ -612,14 +612,22 @@ function isTouchButtonEvent(e) {
 function addTouchControls() {
   let startX = 0, startY = 0, moved = false;
   const threshold = 38;
-  let lastTap = 0;
+  let lastTapTime = 0;
   let tapCount = 0;
-  const tapWindow = 300; // ms between taps for triple-tap
+  const tapWindow = 300; // ms to detect triple-tap
   let isTwoFingerGesture = false;
+  let pendingRotateTimeout = null;
 
   function reset() {
     moved = false;
     isTwoFingerGesture = false;
+  }
+
+  function clearPendingRotate() {
+    if (pendingRotateTimeout) {
+      clearTimeout(pendingRotateTimeout);
+      pendingRotateTimeout = null;
+    }
   }
 
   window.addEventListener('touchstart', e => {
@@ -629,13 +637,11 @@ function addTouchControls() {
     // Ignore single touch on buttons
     if (e.touches.length === 1 && isTouchButtonEvent(e)) return;
 
-    // Capture first touch position
     if (e.touches[0]) {
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
     }
 
-    // Detect two fingers at start
     if (e.touches.length >= 2) {
       isTwoFingerGesture = true;
     }
@@ -675,6 +681,7 @@ function addTouchControls() {
   window.addEventListener('touchend', e => {
     // === HARD DROP: Two-finger tap ===
     if (isTwoFingerGesture && e.touches.length === 0) {
+      clearPendingRotate();
       e.preventDefault();
       navigator.vibrate?.([30, 30, 30]);
       hardDrop();
@@ -694,38 +701,39 @@ function addTouchControls() {
     }
 
     const now = Date.now();
-    const dt = now - lastTap;
+    const dt = now - lastTapTime;
 
-    // --- Tap counting logic ---
+    // Clear any pending rotate (new tap = cancel previous)
+    clearPendingRotate();
+
     if (dt < tapWindow) {
       tapCount++;
     } else {
       tapCount = 1;
     }
 
-    lastTap = now;
+    lastTapTime = now;
 
-    // --- Triple tap detected ---
+    // === TRIPLE TAP: PAUSE ===
     if (tapCount === 3) {
       setPauseState(!paused);
       navigator.vibrate?.(100);
-      tapCount = 0; // reset immediately
+      tapCount = 0;
+      lastTapTime = 0;
       reset();
       return;
     }
 
-    // --- Single tap: schedule rotate only if no more taps come ---
+    // === SINGLE TAP: Schedule rotate only if no more taps come ===
     if (tapCount === 1) {
-      setTimeout(() => {
-        // Only rotate if tapCount didn't increase
-        if (tapCount === 1) {
-          navigator.vibrate?.(8);
-          rotatePiece(1);
-        }
-      }, 50);
+      pendingRotateTimeout = setTimeout(() => {
+        navigator.vibrate?.(8);
+        rotatePiece(1);
+        pendingRotateTimeout = null;
+      }, tapWindow); // wait full window to see if 2nd/3rd tap comes
     }
 
-    // For double tap: do nothing — waiting for third
+    // If tapCount is 2 → do nothing (waiting for third)
     reset();
   }, { passive: false });
 
