@@ -612,12 +612,11 @@ function isTouchButtonEvent(e) {
 function addTouchControls() {
   let startX = 0, startY = 0, moved = false;
   const threshold = 38;
-  let lastTapTime = 0;
+  let lastTap = 0;
   let tapCount = 0;
-  const tapWindow = 300; // ms to detect triple-tap
+  const tapWindow = 300; // ms between taps for triple-tap
   let isTwoFingerGesture = false;
 
-  // Reset state
   function reset() {
     moved = false;
     isTwoFingerGesture = false;
@@ -627,16 +626,16 @@ function addTouchControls() {
     if (overlayMenuActive) return;
     reset();
 
-    // Ignore single touches on buttons
+    // Ignore single touch on buttons
     if (e.touches.length === 1 && isTouchButtonEvent(e)) return;
 
-    // Capture start position for swiping
+    // Capture first touch position
     if (e.touches[0]) {
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
     }
 
-    // Detect two-finger gesture at start
+    // Detect two fingers at start
     if (e.touches.length >= 2) {
       isTwoFingerGesture = true;
     }
@@ -645,9 +644,8 @@ function addTouchControls() {
   }, { passive: false });
 
   window.addEventListener('touchmove', e => {
-    if (overlayMenuActive) return;
-    if (isTwoFingerGesture) {
-      e.preventDefault(); // block scroll during two-finger
+    if (overlayMenuActive || isTwoFingerGesture) {
+      e.preventDefault();
       return;
     }
     if (isTouchButtonEvent(e)) {
@@ -663,7 +661,7 @@ function addTouchControls() {
       moved = true;
       navigator.vibrate?.(18);
       movePiece(dx > 0 ? 'right' : 'left');
-      startX = t.clientX; // allow repeat
+      startX = t.clientX;
       e.preventDefault();
     } else if (dy > threshold) {
       moved = true;
@@ -675,7 +673,7 @@ function addTouchControls() {
   }, { passive: false });
 
   window.addEventListener('touchend', e => {
-    // === HARD DROP: Two-finger tap detected ===
+    // === HARD DROP: Two-finger tap ===
     if (isTwoFingerGesture && e.touches.length === 0) {
       e.preventDefault();
       navigator.vibrate?.([30, 30, 30]);
@@ -690,35 +688,36 @@ function addTouchControls() {
       return;
     }
 
-    // === ROTATE or PAUSE: Only if no swipe happened ===
     if (moved) {
       reset();
       return;
     }
 
     const now = Date.now();
-    const isDoubleOrTriple = now - lastTapTime < tapWindow;
+    const dt = now - lastTap;
 
-    if (isDoubleOrTriple) {
+    // --- Tap counting logic ---
+    if (dt < tapWindow) {
       tapCount++;
     } else {
       tapCount = 1;
     }
 
-    // --- Triple-tap: Pause ---
+    lastTap = now;
+
+    // --- Triple tap detected ---
     if (tapCount === 3) {
       setPauseState(!paused);
       navigator.vibrate?.(100);
-      lastTapTime = 0;
-      tapCount = 0;
+      tapCount = 0; // reset immediately
       reset();
       return;
     }
 
-    // --- Single tap: Rotate (if not part of triple) ---
+    // --- Single tap: schedule rotate only if no more taps come ---
     if (tapCount === 1) {
-      // Use a tiny delay to wait for more taps
       setTimeout(() => {
+        // Only rotate if tapCount didn't increase
         if (tapCount === 1) {
           navigator.vibrate?.(8);
           rotatePiece(1);
@@ -726,7 +725,7 @@ function addTouchControls() {
       }, 50);
     }
 
-    lastTapTime = now;
+    // For double tap: do nothing — waiting for third
     reset();
   }, { passive: false });
 
