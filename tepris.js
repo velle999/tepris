@@ -612,13 +612,27 @@ function addTouchControls() {
     let twoFingerDropLocked=false, twoFingerStartY=null;
     const twoFingerThreshold=40, threshold=38, doubleTapGap=320;
 
-    window.addEventListener('touchstart', e=>{
-        if(!e.touches||e.touches.length>2||overlayMenuActive||isTouchButtonEvent(e)) return;
-        tryStartGame();
-        const t=e.touches[0]; startX=t.clientX; startY=t.clientY; moved=false;
-        longPressTimer=setTimeout(()=>{navigator.vibrate?.(100);hardDrop();},420);
-        if(e.touches.length===2){twoFingerStartY=(e.touches[0].clientY+e.touches[1].clientY)/2; twoFingerDropLocked=false;}
-    }, {passive:false});
+window.addEventListener('touchstart', e => {
+    if (!e.touches || e.touches.length > 2 || overlayMenuActive || isTouchButtonEvent(e)) return;
+    
+    e.preventDefault(); // 🛑 stops ghost click that causes double input
+    
+    tryStartGame();
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+    moved = false;
+
+    longPressTimer = setTimeout(() => {
+        navigator.vibrate?.(100);
+        hardDrop();
+    }, 420);
+
+    if (e.touches.length === 2) {
+        twoFingerStartY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        twoFingerDropLocked = false;
+    }
+}, { passive: false });
 
     window.addEventListener('touchmove', e=>{
         if(!e.touches||overlayMenuActive||isTouchButtonEvent(e)) return;
