@@ -585,58 +585,7 @@ function resetGamepadPolling() {
     }
 }
 
-// ===== Touch Button Bindings =====
-function addTouchButtonListeners() {
-    function bindTouchMouse(id, startFn, endFn = null) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        let lastTouch = 0;
 
-        function onStart(e) {
-            e.preventDefault();
-            // 🛑 Ignore ghost mousedown after touch
-            if (e.type === 'mousedown' && Date.now() - lastTouch < 500) return;
-            if (e.type === 'touchstart') lastTouch = Date.now();
-            startFn();
-            el.classList.add('active');
-        }
-
-        function onEnd(e) {
-            e.preventDefault();
-            // 🛑 Ignore ghost mouseup after touch
-            if (e.type === 'mouseup' && Date.now() - lastTouch < 500) return;
-            if (endFn) endFn();
-            el.classList.remove('active');
-        }
-
-        el.addEventListener('touchstart', onStart, { passive: false });
-        el.addEventListener('touchend', onEnd, { passive: false });
-        el.addEventListener('touchcancel', onEnd, { passive: false });
-        el.addEventListener('mousedown', onStart);
-        el.addEventListener('mouseup', onEnd);
-    }
-
-    bindTouchMouse('left-btn', () => startRepeat('left', true), () => stopRepeat('left', true));
-    bindTouchMouse('right-btn', () => startRepeat('right', true), () => stopRepeat('right', true));
-    bindTouchMouse('down-btn', () => startRepeat('down', true), () => stopRepeat('down', true));
-    bindTouchMouse('rotate-btn', () => rotatePiece(1));
-    bindTouchMouse('harddrop-btn', () => hardDrop());
-    bindTouchMouse('hold-btn', () => {
-        if (canHold) {
-            if (!hold) {
-                hold = current;
-                current = next;
-                next = randomPiece();
-            } else {
-                [current, hold] = [hold, current];
-            }
-            pos = { x: ((COLS / 2) | 0) - ((current[0].length / 2) | 0), y: 0 };
-            canHold = false;
-        } else {
-            setPauseState(!paused);
-        }
-    });
-}
 
 // ========== Overlay/Menu System ==========
 
