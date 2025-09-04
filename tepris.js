@@ -544,25 +544,39 @@ function addTouchControls() {
     }
   }, { passive: false });
 
-  window.addEventListener('touchend', e => {
-    if (isTouchButtonEvent(e)) return;
-    clearTimeout(longPressTimer);
-    if (e.changedTouches && e.changedTouches.length === 2) {
-      navigator.vibrate?.([30,30,30]);
-      hardDrop();
-      return;
-    }
-    if (moved) return;
-    const now = Date.now();
-    if (now - lastTap < doubleTapGap) {
-      setPauseState(!paused);
-      lastTap = 0;
-    } else {
+let tapCount = 0;
+let tapTimer = null;
+
+window.addEventListener('touchend', e => {
+  if (isTouchButtonEvent(e)) return;
+  clearTimeout(longPressTimer);
+
+  // --- 2-finger hard drop ---
+  if (e.touches.length === 0 && e.changedTouches.length === 2) {
+    navigator.vibrate?.([30,30,30]);
+    hardDrop();
+    return;
+  }
+
+  if (moved) return;
+
+  // --- multi-tap handling ---
+  tapCount++;
+  clearTimeout(tapTimer);
+
+  tapTimer = setTimeout(() => {
+    if (tapCount === 1 || tapCount === 2) {
+      // single or double tap → rotate
       navigator.vibrate?.(8);
       rotatePiece(1);
-      lastTap = now;
+    } else if (tapCount >= 3) {
+      // triple tap (or more) → pause
+      navigator.vibrate?.([60, 40, 60]); // distinct buzz pattern
+      setPauseState(!paused);
     }
-  }, { passive: false });
+    tapCount = 0; // reset
+  }, doubleTapGap);
+}, { passive: false });
 
   addTouchButtonListeners();
 }
