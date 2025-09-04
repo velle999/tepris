@@ -137,6 +137,17 @@ html, body {
   gap: 10px;
   width: 100%;
   box-sizing: border-box;
+
+  /* Prevent accidental text selection */
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+
+  /* Disable tap highlight and delay on mobile */
+  -webkit-tap-highlight-color: transparent;
+
+  /* Ensure touch actions are handled immediately */
+  touch-action: manipulation;
 }
 
 #touch-controls button {
@@ -148,11 +159,45 @@ html, body {
   background: #222;
   color: #fff;
   cursor: pointer;
+
+  /* Smooth transition for visual feedback */
+  transition: 
+    background-color 0.1s ease,
+    color 0.1s ease,
+    transform 0.05s ease,
+    filter 0.1s ease;
+
+  /* Remove default button outline, but keep focus visible */
+  outline: none;
 }
 
+/* Hover – desktop only */
 #touch-controls button:hover {
   background: #00ffff;
   color: #000;
+}
+
+/* Active/Focus – for keyboard and touch */
+#touch-controls button:active,
+#touch-controls button.active {
+  background: #0ff;
+  color: #000;
+  transform: scale(0.95);
+  filter: brightness(1.3) contrast(1.1);
+}
+
+/* Optional: Slightly larger hit area on mobile */
+@media (max-width: 768px) {
+  #touch-controls button {
+    padding: 18px 14px; /* Taller for easier tapping */
+    font-size: 2.1rem;
+  }
+}
+
+/* Focus indicator for accessibility (visible only when using keyboard) */
+#touch-controls button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.6);
+  transform: scale(1.02);
 }
 
 /* === Info Panel === */
