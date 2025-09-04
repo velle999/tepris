@@ -611,16 +611,19 @@ function isTouchButtonEvent(e) {
 
 function addTouchControls() {
   let startX = 0, startY = 0, moved = false;
-  const threshold = 15; // Lower threshold to ignore tiny moves
+  const threshold = 15;          // For swipe detection
+  const longPressDelay = 400;    // ms to trigger hard drop
   let lastTapTime = 0;
   let tapCount = 0;
   const tapWindow = 300;
-  let isTwoFingerGesture = false;
-  let pendingRotateTimeout = null;
+  let longPressTimer = null;
 
   function reset() {
     moved = false;
-    isTwoFingerGesture = false;
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
   }
 
   function clearPendingRotate() {
@@ -629,86 +632,76 @@ function addTouchControls() {
       pendingRotateTimeout = null;
     }
   }
+  let pendingRotateTimeout = null;
 
   window.addEventListener('touchstart', e => {
-    if (overlayMenuActive) return;
+    if (overlayMenuActive || isTouchButtonEvent(e)) return;
+    
     reset();
 
-    // Always capture position
-    if (e.touches[0]) {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    }
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
 
-    // Detect two fingers at start — even over buttons
-    if (e.touches.length >= 2) {
-      isTwoFingerGesture = true;
-    }
+    // Start long press detection
+    longPressTimer = setTimeout(() => {
+      navigator.vibrate?.(100);
+      hardDrop();
+      reset();
+    }, longPressDelay);
 
-    // Prevent default on multi-touch to avoid conflicts
-    if (e.touches.length >= 2 || !isTouchButtonEvent(e)) {
-      e.preventDefault();
-    }
+    e.preventDefault();
   }, { passive: false });
 
   window.addEventListener('touchmove', e => {
-    if (overlayMenuActive) return;
-
-    // If two fingers down, block all to protect gesture
-    if (isTwoFingerGesture) {
-      e.preventDefault();
-      return;
-    }
-
-    // If moving over buttons, prevent scroll
-    if (isTouchButtonEvent(e)) {
-      e.preventDefault();
-      return;
-    }
+    if (overlayMenuActive || !longPressTimer) return;
 
     const t = e.touches[0];
-    const dx = t.clientX - startX;
-    const dy = t.clientY - startY;
+    const dx = Math.abs(t.clientX - startX);
+    const dy = Math.abs(t.clientY - startY);
 
-    // Only consider movement if over threshold
-    if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
+    // If moved beyond threshold, cancel long press
+    if (dx > threshold || dy > threshold) {
       moved = true;
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
     }
 
-    // Optional: allow swipe if single finger
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+    // Optional: allow swipe during move
+    if (dx > 40 && dx > dy) {
       navigator.vibrate?.(18);
       movePiece(dx > 0 ? 'right' : 'left');
       startX = t.clientX;
-      e.preventDefault();
-    } else if (dy > 40) {
+      moved = true;
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    } else if (dy > 40 && dy > dx) {
       navigator.vibrate?.(10);
       movePiece('down');
       startY = t.clientY;
-      e.preventDefault();
+      moved = true;
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
     }
+
+    e.preventDefault();
   }, { passive: false });
 
   window.addEventListener('touchend', e => {
-    // === ✅ HARD DROP: Two-finger tap detected ===
-    if (isTwoFingerGesture && e.touches.length === 0) {
-      clearPendingRotate();
-      e.preventDefault();
-      navigator.vibrate?.([30, 30, 30]);
-      console.log("💥 Two-finger hard drop triggered!");
-      hardDrop();
-      reset();
-      return;
+    // Always clear long press on release
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
     }
 
-    // Ignore single tap if it started on a button (prevents rotate)
-    if (e.touches.length === 0 && !isTwoFingerGesture && isTouchButtonEvent(e)) {
-      reset();
-      return;
-    }
-
-    // If swiped, ignore tap
+    // If was long press, already dropped — exit
     if (moved) {
+      reset();
+      return;
+    }
+
+    // Ignore if started on a button
+    if (isTouchButtonEvent(e)) {
       reset();
       return;
     }
@@ -726,9 +719,8 @@ function addTouchControls() {
 
     lastTapTime = now;
 
-    // === ✅ TRIPLE TAP: Pause ===
+    // === TRIPLE TAP → PAUSE ===
     if (tapCount === 3) {
-      console.log("⏸️ Paused via triple-tap");
       setPauseState(!paused);
       navigator.vibrate?.(100);
       tapCount = 0;
@@ -736,7 +728,7 @@ function addTouchControls() {
       return;
     }
 
-    // === ✅ SINGLE TAP: Rotate after delay ===
+    // === SINGLE TAP → ROTATE (after window) ===
     if (tapCount === 1) {
       pendingRotateTimeout = setTimeout(() => {
         navigator.vibrate?.(8);
