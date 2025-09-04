@@ -67,24 +67,14 @@ html, body {
 /* === Layout === */
 #game-area {
   display: flex;
-  /* flex-direction is set by JS, defaulting to row is fine */
-  flex-direction: row; /* Default, JS might change it */
+  flex-direction: row;
   gap: 12px;
-  /* Vertically center children (board, info-panel) within #game-area height */
-  align-items: center;
-  /* Distribute space around the group of children for better horizontal centering feel */
-  /* Try 'space-around' or 'space-evenly' instead of 'center' */
-  justify-content: space-around; 
-  /* Or, if you want them bunched together but centered as a unit: */
-  /* justify-content: center; */
-  
+  align-items: flex-start;
+  justify-content: center;
   width: 100%;
-  /* height: 100%;  Keep this, it ensures it uses the full height of #tetris-wrapper */
   height: 100%;
   overflow: hidden;
   box-sizing: border-box;
-  /* Add margin auto for vertical centering fallback (optional, likely redundant with parent's align-items) */
-  /* margin: auto 0; */ 
 }
 
 /* === Canvas & Container === */
