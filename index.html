@@ -20,26 +20,7 @@
       align-items: center;
       flex-direction: column;
     }
-    /* Milkdrop canvas sits behind everything */
-    #milkdrop {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 0;
-    }
-    #arcade-shell {
-      background: #000;
-      border: 10px solid #0ff;
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: 0 0 20px #0ff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      position: relative;
-      z-index: 1;
-    }
+    #arcade-shell { background: #000; border: 10px solid #0ff; border-radius: 20px; padding: 20px; box-shadow: 0 0 20px #0ff; display: flex; flex-direction: column; align-items: center; position: relative;}
     #tetris-toggle { background: #0ff; color: #000; font-family: inherit; font-size: 1rem; padding: 10px 20px; border: none; border-radius: 8px; margin-bottom: 10px; cursor: pointer; box-shadow: 0 0 10px #0ff; transition: background 0.2s ease;}
     #tetris-toggle:hover { background: #00aaff;}
     #tetris-wrapper { display: none; flex-direction: column; align-items: center; background: #111; padding: 10px; border-radius: 10px;}
@@ -53,7 +34,7 @@
     @keyframes crt-flash { 0%{opacity:1;} 30%{opacity:0.4;} 60%{opacity:0.9;} 100%{opacity:0;}}
     #ready-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; font-size: 3rem; color: #0ff; background: rgba(0, 0, 0, 0.85); text-shadow: 0 0 10px #0ff; z-index: 10000; opacity: 0; transition: opacity 0.3s ease; font-family: 'Press Start 2P', monospace;}
     canvas { touch-action: none;}
-    /* Initials modal */
+    /* New initials modal style */
     #initials-modal {
       display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(0,0,0,0.95); color: #0ff; z-index: 99999;
@@ -74,9 +55,6 @@
   </style>
 </head>
 <body>
-  <!-- MilkDrop canvas -->
-  <canvas id="milkdrop"></canvas>
-
   <div id="crt-flash"></div>
   <div id="ready-overlay">READY…</div>
   <div id="pause-menu">
@@ -94,33 +72,31 @@
       <div class="controls-row"><b>Start / Enter:</b> Pause / Resume</div>
     </div>
   </div>
-
-  <!-- 🏆 Initials Modal -->
-  <div id="initials-modal">
-    <div style="font-size:2.1rem; margin-bottom:18px;">🎉 NEW HIGH SCORE!</div>
-    <div style="font-size:1.1rem; margin-bottom:8px;">Enter your initials:</div>
-    <input id="initials-input" maxlength="3" autocomplete="off" autocapitalize="on" spellcheck="false">
-    <button id="submit-initials">OK</button>
-  </div>
-
-  <!-- Audio -->
+  <!-- 🏆 Initials Modal (NEW!) -->
+<div id="initials-modal">
+  <div style="font-size:2.1rem; margin-bottom:18px;">🎉 NEW HIGH SCORE!</div>
+  <div style="font-size:1.1rem; margin-bottom:8px;">Enter your initials:</div>
+  <input id="initials-input" maxlength="3" autocomplete="off" autocapitalize="on" spellcheck="false">
+  <button id="submit-initials">OK</button>
+</div>
   <audio id="coin-sound" src="assets/coin.wav" preload="auto"></audio>
   <audio id="rotate-sound" src="assets/boop.mp3" preload="auto"></audio>
   <audio id="bg-music" src="assets/background.mp3" preload="auto"></audio>
   <audio id="points-sound" src="assets/points.mp3" preload="auto"></audio>
   <audio id="tetris-sound" src="assets/tepris!.mp3" preload="auto"></audio>
-
-  <!-- Arcade shell -->
   <div id="arcade-shell">
     <button id="tetris-toggle">🪙</button>
+    <!-- Fullscreen toggle button -->
     <button id="fullscreen-btn" title="Toggle Fullscreen">⛶</button>
     <div id="insert-coin" style="position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-family:'Press Start 2P', monospace;font-size:20px;color:#0f0;text-shadow:0 0 3px #0f0;display:none;z-index:9998;">INSERT COIN</div>
     <div id="tetris-wrapper">
       <div id="game-area">
+        <!-- Main game board -->
         <div id="tetris-container">
           <canvas id="tetris"></canvas>
           <div id="landing-preview"></div>
         </div>
+        <!-- Info panel with preview, scoreboard and touch controls -->
         <div id="info-panel">
           <canvas id="preview-box"></canvas>
           <div id="scoreboard">
@@ -141,8 +117,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Game over menu -->
   <div id="gameover-menu" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
     background:rgba(0,0,0,0.92); color:#0ff; padding:36px 36px 22px 36px; border:2px solid #0ff; z-index:99999; border-radius:12px; min-width:220px; text-align:center;">
     <div style="font-size:2.1rem; font-family:'Press Start 2P',monospace; letter-spacing:0.08em; margin-bottom:14px;">GAME OVER</div>
@@ -150,67 +124,7 @@
     <button id="restart-btn" style="font-size:1.5rem; font-family:inherit; background:#0ff; color:#000; border:none; border-radius:8px; padding:10px 34px; box-shadow:0 0 10px #0ff;">RESTART</button>
   </div>
 
-  <!-- Scripts -->
-  <script src="https://unpkg.com/butterchurn/lib/butterchurn.min.js"></script>
-  <script src="https://unpkg.com/butterchurn-presets/lib/butterchurnPresets.min.js"></script>
+  <!-- Main Game Logic -->
   <script src="tepris.js"></script>
-  <script>
-    // Grab bg-music element directly from DOM
-    const bgMusicEl = document.getElementById('bg-music');
-
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const analyser = audioCtx.createAnalyser();
-
-    if (!bgMusicEl._butterchurnConnected) {
-      const source = audioCtx.createMediaElementSource(bgMusicEl);
-      source.connect(analyser);
-      analyser.connect(audioCtx.destination);
-      bgMusicEl._butterchurnConnected = true;
-    }
-
-    // MilkDrop canvas
-    const milkdropCanvas = document.getElementById('milkdrop');
-    const visualizer = butterchurn.createVisualizer(audioCtx, milkdropCanvas, {
-      width: window.innerWidth,
-      height: window.innerHeight
-    });
-
-    // Load a random preset
-    const presets = butterchurnPresets.getPresets();
-    const presetKeys = Object.keys(presets);
-    function loadRandomPreset() {
-      const randomPreset = presets[presetKeys[Math.floor(Math.random() * presetKeys.length)]];
-      visualizer.loadPreset(randomPreset, 2.0);
-    }
-
-    loadRandomPreset(); // initial load
-
-    // Cycle presets every 60 seconds
-    setInterval(loadRandomPreset, 60000);
-
-    // Resize handler
-    window.addEventListener('resize', () => {
-      visualizer.setRendererSize(window.innerWidth, window.innerHeight);
-    });
-
-    // Render loop
-    function renderFrame() {
-      requestAnimationFrame(renderFrame);
-      visualizer.render();
-    }
-    renderFrame();
-
-    // Unlock audio on first user interaction
-    function unlockAudio() {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      if (bgMusicEl.paused) bgMusicEl.play();
-      document.removeEventListener('keydown', unlockAudio);
-      document.removeEventListener('touchstart', unlockAudio);
-      document.removeEventListener('click', unlockAudio);
-    }
-    document.addEventListener('keydown', unlockAudio);
-    document.addEventListener('touchstart', unlockAudio);
-    document.addEventListener('click', unlockAudio);
-  </script>
 </body>
 </html>
