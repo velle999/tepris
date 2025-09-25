@@ -1,47 +1,34 @@
 {
-  "name": "tepris-arcade",
-  "version": "1.0.0",
-  "description": "TEPRIS: Retro-style falling block game for Steam Deck and Linux.",
+  "name": "tepris",
+  "version": "0.1.0",
+  "description": "TEPRIS Arcade \u2014 desktop build",
   "main": "main.js",
-  "author": "Velle <velle@example.com>",
+  "author": "Velle",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win nsis portable",
-    "build:linux": "electron-builder --linux deb",
-    "clean": "rm -rf dist/*"
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder -w"
   },
-  "dependencies": {},
   "devDependencies": {
-    "electron": "^29.0.0",
-    "electron-builder": "^24.0.0"
+    "electron": "^32.0.0",
+    "electron-builder": "^24.13.3"
   },
   "build": {
     "appId": "com.velle.tepris",
-    "productName": "TEPRIS Arcade",
-    "copyright": "Copyright © 2025",
-    "directories": {
-      "buildResources": "assets",
-      "output": "dist"
-    },
+    "productName": "TEPRIS",
     "files": [
-      "**/*",
-      "!node_modules",
-      "!dist",
-      "!build",
-      "!Dockerfile",
-      "!*.log",
-      "assets/**/*"
+      "app/**",
+      "main.js",
+      "preload.js",
+      "package.json"
     ],
-    "linux": {
-      "target": ["deb"],
-      "maintainer": "Velle <velle@example.com>",
-      "category": "Game",
-      "icon": "assets/icon.png"
-    },
     "win": {
-      "target": ["nsis", "portable"],
-      "icon": "assets/icon.ico"
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "assets/icon.png"
     }
   }
 }

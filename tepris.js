@@ -263,32 +263,50 @@ function hardDrop() {
 function sweep() {
   flashingCells = [];
   let rowsToClear = [];
-  for (let y = ROWS - 1; y >= 0; y--)
+
+  // Collect all full rows
+  for (let y = ROWS - 1; y >= 0; y--) {
     if (arena[y].every(v => v !== 0)) rowsToClear.push(y);
+  }
 
   if (rowsToClear.length) {
+    // Mark cells for flash effect
     rowsToClear.forEach(y => {
       for (let x = 0; x < COLS; x++) flashingCells.push({ x, y });
     });
+
     flashStartTime = performance.now();
     isFlashing = true;
 
-    if (rowsToClear.length === 4) { playSafe(tetrisSound); screenShake(); triggerTetrisEffect(); }
-    else playSafe(pointsSound);
+    // === Sound & FX ===
+    if (rowsToClear.length === 4) {
+      playSafe(tetrisSound);
+      // Optional: offset for layering effect
+      setTimeout(() => playSafe(tetrisSound2), 120);
+      screenShake();
+      triggerTetrisEffect();
+    } else {
+      playSafe(pointsSound);
+    }
+
     pulseScore();
 
+    // === Actually clear lines after flash ===
     function finishFlash() {
-      rowsToClear.sort((a,b)=>a-b).forEach(y => {
-        arena.splice(y,1);
+      rowsToClear.sort((a, b) => a - b).forEach(y => {
+        arena.splice(y, 1);
         arena.unshift(Array(COLS).fill(0));
       });
+
       linesCleared += rowsToClear.length;
       score += rowsToClear.length === 4 ? 1200 : rowsToClear.length * 100;
       level = Math.floor(linesCleared / 10);
       dropInterval = Math.max(100, 1000 - level * 100);
+
       updateScore();
       flashingCells = [];
       isFlashing = false;
+
       if (running) requestAnimationFrame(update);
     }
 
@@ -1044,6 +1062,7 @@ document.addEventListener('DOMContentLoaded', () => {
   rotateSound = document.getElementById('rotate-sound');
   pointsSound = document.getElementById('points-sound');
   tetrisSound = document.getElementById('tetris-sound');
+  tetrisSound2 = document.getElementById('tetris-sound2');  
   startSound = coinSound;
   loadHighScore();
   

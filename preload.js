@@ -1,1 +1,1 @@
-// preload.js
+// Minimal, safe bridge. Add IPC or context bridge later if needed.
