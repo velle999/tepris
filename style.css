@@ -423,6 +423,8 @@ html, body {
   font-size: 1rem;
   text-align: left;
   box-shadow: 0 0 14px #0ff4, inset 0 0 6px #022;
+  max-width: 95%;         /* keep it safe on mobile */
+  box-sizing: border-box;
 }
 
 /* === Controls Title === */
@@ -431,9 +433,9 @@ html, body {
   font-weight: bold;
   color: #0ff;
   margin-bottom: 12px;
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   letter-spacing: 0.15em;
-  text-shadow: 0 0 8px #0ff;
+  text-shadow: 0 0 8px #0ff, 0 0 14px #0ff;
 }
 
 /* === Section Headers (Movement / Rotation / Drop / Utility) === */
@@ -456,7 +458,7 @@ html, body {
   letter-spacing: 0.03em;
   line-height: 1.35;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: wrap;    /* let keys wrap instead of overflow */
   gap: 4px;
   align-items: center;
 }
@@ -474,6 +476,7 @@ html, body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   line-height: 1.2;
+  white-space: nowrap;   /* prevent breaking mid-key */
 }
 
 #pause-menu .btn-key.alt {
@@ -487,8 +490,36 @@ html, body {
   box-shadow: 0 0 6px #f33, inset 0 0 3px #fff;
 }
 
+/* === Divider Line === */
 #pause-menu hr {
   border: none;
   border-top: 2px solid #088;
   margin: 12px 0 15px 0;
+}
+
+/* === Responsive Controls for Small Screens === */
+@media (max-width: 600px) {
+  #pause-menu #controls-layout {
+    font-size: 0.9rem;
+    padding: 12px 14px;
+  }
+
+  #pause-menu .controls-title {
+    font-size: 1.1rem;
+  }
+
+  #pause-menu .controls-section {
+    font-size: 0.9rem;
+  }
+
+  #pause-menu .controls-row {
+    font-size: 0.8rem;
+    margin-left: 6px;
+  }
+
+  #pause-menu .btn-key {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    margin-bottom: 3px;
+  }
 }
