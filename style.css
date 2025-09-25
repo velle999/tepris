@@ -412,32 +412,79 @@ html, body {
   outline: 2px solid #fff;
 }
 
+/* === Controls Layout Panel === */
 #pause-menu #controls-layout {
   margin-top: 20px;
-  background: rgba(20,32,32,0.96);
-  padding: 14px 18px 12px 18px;
-  border-radius: 10px;
-  border: 1.8px solid #0ff4;
+  background: rgba(10, 20, 20, 0.95);
+  padding: 18px 20px 16px 20px;
+  border-radius: 12px;
+  border: 2px solid #0ff6;
   color: #fff;
   font-size: 1rem;
   text-align: left;
-  box-shadow: 0 0 12px #0ff2;
+  box-shadow: 0 0 14px #0ff4, inset 0 0 6px #022;
 }
 
+/* === Controls Title === */
 #pause-menu .controls-title {
   text-align: center;
   font-weight: bold;
   color: #0ff;
-  margin-bottom: 10px;
-  font-size: 1.22rem;
-  letter-spacing: 0.13em;
+  margin-bottom: 12px;
+  font-size: 1.3rem;
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 8px #0ff;
 }
 
+/* === Section Headers (Movement / Rotation / Drop / Utility) === */
+#pause-menu .controls-section {
+  margin-top: 12px;
+  margin-bottom: 6px;
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: #0ff;
+  text-shadow: 0 0 6px #0ff;
+  border-bottom: 1px solid rgba(0,255,255,0.3);
+  padding-bottom: 3px;
+  letter-spacing: 0.06em;
+}
+
+/* === Control Rows === */
 #pause-menu .controls-row {
-  margin-bottom: 5px;
-  font-size: 1.02em;
-  letter-spacing: 0.04em;
-  line-height: 1.25;
+  margin: 4px 0 6px 12px;
+  font-size: 0.95rem;
+  letter-spacing: 0.03em;
+  line-height: 1.35;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+/* === Glowing Button Capsules === */
+#pause-menu .btn-key {
+  display: inline-block;
+  background: #0ff;
+  color: #000;
+  font-weight: bold;
+  font-size: 0.85rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  box-shadow: 0 0 6px #0ff, inset 0 0 3px #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+}
+
+#pause-menu .btn-key.alt {
+  background: #ff0;
+  box-shadow: 0 0 6px #ff0, inset 0 0 3px #fff;
+}
+
+#pause-menu .btn-key.danger {
+  background: #f33;
+  color: #fff;
+  box-shadow: 0 0 6px #f33, inset 0 0 3px #fff;
 }
 
 #pause-menu hr {
