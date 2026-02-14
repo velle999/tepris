@@ -1,7 +1,7 @@
 {
   "name": "tepris",
   "version": "0.1.0",
-  "description": "TEPRIS Arcade \u2014 desktop build",
+  "description": "TEPRIS Arcade — desktop build",
   "main": "main.js",
   "author": "Velle",
   "license": "MIT",
@@ -17,18 +17,31 @@
   "build": {
     "appId": "com.velle.tepris",
     "productName": "TEPRIS",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
     "files": [
-      "app/**",
+      "index.html",
       "main.js",
       "preload.js",
-      "package.json"
+      "style.css",
+      "tepris.js",
+      "package.json",
+      "assets/**/*",
+      "node_modules/**/*"
     ],
     "win": {
       "target": [
         "nsis",
         "portable"
       ],
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "publisherName": "Velle"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
     }
   }
 }
