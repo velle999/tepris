@@ -10,7 +10,10 @@ Built for the browser. Built for chaos.
 ## 🚀 Play It
 
 👉 Live Demo:  
-https://velle999.github.io/tepris/  
+https://velle999.github.io/tepris/    
+
+👉 Desktop Release (Windows):  
+[Download TEPRIS v0.1.0 Setup](https://github.com/velle999/tepris/releases/download/v0.1.0/TEPRIS.Setup.0.1.0.exe)
 
 ---
 
@@ -41,11 +44,12 @@ https://velle999.github.io/tepris/
 ### 🎮 Gamepad
 | Button | Action |
 |--------|--------|
-| D-pad / Stick | Move |
-| A / X | Rotate |
-| B | Hard Drop |
-| Y | Hold |
-| Start | Pause |
+| D-pad / Left Stick | Move |
+| A / Z / ↑ | Rotate |
+| B / X / Space | Hard Drop |
+| Y / ↓ | Soft Drop |
+| X / Shift | Hold Piece |
+| Start / Enter | Pause |
 
 ### 📱 Touch
 | Gesture | Action |
@@ -71,60 +75,5 @@ https://velle999.github.io/tepris/
 ## 📦 Run Locally
 
 ```bash
-git clone https://github.com/yourname/tepris.git
+git clone https://github.com/velle999/tepris.git  
 cd tepris
-```
-
-Open `index.html` in your browser  
-or run a local server:
-
-```bash
-npx serve .
-```
-
----
-
-## 🧠 Design Philosophy
-
-TEPRIS aims to feel like:
-
-> “An arcade cabinet possessed by a synthwave demon.”
-
-Fast, loud, reactive, and satisfying.
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Online leaderboard  
-- [ ] Skins / themes  
-- [ ] VS multiplayer  
-- [ ] Replay system  
-- [ ] Beat-synced visualizer mode  
-
----
-
-## 🤝 Contributing
-
-PRs welcome. Weird ideas encouraged.
-
----
-
-## 📜 License
-
-MIT
-
----
-
-## 💀 Credits
-
-Velle + ChatGPT + Qwen  
-
-Inspired by classic Tetris and CRT-era arcade chaos.
-
----
-
-## ⭐ Like it?
-
-Star the repo and share it.  
-Let’s make browser games weird again.
