@@ -6,7 +6,8 @@ Built for the browser. Built for chaos.
 👉 Live Demo:
 https://velle999.github.io/tepris/    
 👉 Desktop Release (Windows):
-Download TEPRIS v0.1.0 Setup
+Download TEPRIS v0.1.0 Setup https://github.com/velle999/tepris/releases/download/v0.1.0/TEPRIS.Setup.0.1.0.exe?spm=a2ty_o01.29997173.0.0.59be5171YlSEMn&file=TEPRIS.Setup.0.1.0.exe
+
 ✨ Features
 
     🎮 Full Gamepad Support (D-pad, stick, rumble, start/pause)
