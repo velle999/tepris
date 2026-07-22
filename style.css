@@ -233,6 +233,34 @@ html, body {
   box-shadow: 0 0 12px #00aaff;
 }
 
+/* === Close Button === */
+/* Sits to the left of the fullscreen button; [hidden] wins when tepris runs
+   as a web page and there is no native window to close. */
+#close-btn {
+  position: absolute;
+  top: 10px;
+  right: 68px;
+  font-size: 1.5rem;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #ff0055;
+  color: #000;
+  cursor: pointer;
+  box-shadow: 0 0 8px #f05;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  z-index: 6000;
+}
+
+#close-btn:hover {
+  background: #ff4488;
+  box-shadow: 0 0 12px #ff4488;
+}
+
+#close-btn[hidden] {
+  display: none;
+}
+
 /* === Overlay === */
 #ready-overlay {
   font-size: 4rem;

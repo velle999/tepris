@@ -1,5 +1,9 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+
+// Geometry the window had before it went fullscreen, so leaving fullscreen
+// returns it to a real floating window rather than a maximized one.
+let floatingBounds = null;
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -28,11 +32,57 @@ function createWindow() {
     win.webContents.openDevTools();
   }
 
+  // Keep the renderer's button glyph in sync however fullscreen was entered
+  // (our button, the compositor's titlebar, or F11).
+  win.on('enter-full-screen', () => {
+    win.webContents.send('window:fullscreen-changed', true);
+  });
+  win.on('leave-full-screen', () => {
+    win.webContents.send('window:fullscreen-changed', false);
+  });
+
   // Handle window closing
   win.on('closed', () => {
     // Dereference the window object
   });
 }
+
+function setFullscreen(win, value) {
+  if (value) {
+    if (!win.isFullScreen()) {
+      floatingBounds = win.getBounds();
+    }
+    win.setFullScreen(true);
+    return;
+  }
+
+  win.setFullScreen(false);
+  // Under wlroots the compositor may hand back a maximized surface; force the
+  // window back to the floating geometry it had before.
+  if (win.isMaximized()) {
+    win.unmaximize();
+  }
+  if (floatingBounds) {
+    win.setBounds(floatingBounds);
+  }
+}
+
+ipcMain.handle('window:toggle-fullscreen', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return false;
+  const next = !win.isFullScreen();
+  setFullscreen(win, next);
+  return next;
+});
+
+ipcMain.handle('window:is-fullscreen', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  return win ? win.isFullScreen() : false;
+});
+
+ipcMain.on('window:close', (event) => {
+  BrowserWindow.fromWebContents(event.sender)?.close();
+});
 
 // This method will be called when Electron has finished initialization
 app.whenReady().then(() => {

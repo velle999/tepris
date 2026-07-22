@@ -898,10 +898,16 @@ function scheduleResizeNow(delay = 0) {
 }
 
 /**
- * Toggle fullscreen on the entire document. Safely ignores errors if fullscreen is not supported.
+ * Toggle fullscreen. Under Electron this drives the native window so leaving
+ * fullscreen restores a real floating window; in a browser it falls back to the
+ * DOM Fullscreen API. Safely ignores errors if fullscreen is not supported.
  */
 function toggleFullscreen() {
   try {
+    if (window.teprisWindow) {
+      window.teprisWindow.toggleFullscreen().then(setFullscreenGlyph);
+      return;
+    }
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen?.();
     } else {
@@ -910,6 +916,31 @@ function toggleFullscreen() {
   } catch (err) {
     console.warn('Fullscreen toggle failed', err);
   }
+}
+
+/*
+ * The kiosk launcher appends #app to the game URL. It marks the two contexts
+ * where quitting is meaningful -- a dedicated window we are allowed to close --
+ * as opposed to a shared browser tab, where window.close() is a no-op and a
+ * quit button would just look broken.
+ */
+const CAN_CLOSE_WINDOW = window.location.hash === '#app';
+
+/** Quit the app, by whichever route this build has available. */
+function closeApp() {
+  if (window.teprisWindow) {
+    window.teprisWindow.close();
+    return;
+  }
+  window.close();
+}
+
+/** Point the fullscreen button's glyph at the action it will perform next. */
+function setFullscreenGlyph(isFullscreen) {
+  const btn = document.getElementById('fullscreen-btn');
+  if (!btn) return;
+  btn.textContent = isFullscreen ? '🗗' : '⛶';
+  btn.title = isFullscreen ? 'Leave Fullscreen' : 'Toggle Fullscreen';
 }
 
 /*
@@ -1221,10 +1252,31 @@ document.addEventListener('DOMContentLoaded', () => {
   // Bind fullscreen button
   document.getElementById('fullscreen-btn')?.addEventListener('click', toggleFullscreen);
 
+  // Close button. Under Electron this goes through the IPC bridge; on
+  // SynapseOS tepris runs in a dedicated Firefox profile whose user.js sets
+  // dom.allow_scripts_to_close_windows, so window.close() ends the app there.
+  // Only a plain browser tab, where neither route works, leaves it hidden.
+  const closeBtn = document.getElementById('close-btn');
+  if (closeBtn && (window.teprisWindow || CAN_CLOSE_WINDOW)) {
+    closeBtn.hidden = false;
+    closeBtn.addEventListener('click', closeApp);
+  }
+
+  if (window.teprisWindow) {
+    window.teprisWindow.isFullscreen().then(setFullscreenGlyph);
+    window.teprisWindow.onFullscreenChanged((value) => {
+      setFullscreenGlyph(value);
+      scheduleResizeNow(50);
+    });
+  }
+
   // Global resize/orientation/fullscreen events
   window.addEventListener('resize', () => { scheduleResizeNow(50); });
   window.addEventListener('orientationchange', () => { scheduleResizeNow(350); });
-  document.addEventListener('fullscreenchange', () => { scheduleResizeNow(50); });
+  document.addEventListener('fullscreenchange', () => {
+    if (!window.teprisWindow) setFullscreenGlyph(!!document.fullscreenElement);
+    scheduleResizeNow(50);
+  });
   window.addEventListener('load', () => { scheduleResizeNow(50); });
 
   // --- START THE GAMEPAD LOOP! ---
