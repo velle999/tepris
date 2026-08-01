@@ -1,5 +1,5 @@
 # 🧠🎮 TEPRIS  
-### *Because normal Tetris is for cowards.*
+### *An arcade Tetris remix — CRT/VHS post-processing, gamepad support, screen shake, and a fake BIOS boot sequence.*
 
 TEPRIS is a high-energy, arcade-style Tetris remix with CRT/VHS visual effects, RGB reactive backgrounds, full gamepad + touch support, and screen-shaking arcade feedback.
 
